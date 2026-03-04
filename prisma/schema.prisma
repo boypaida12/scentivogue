@@ -1,0 +1,136 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Admin/User Management
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  password      String
+  name          String?
+  role          UserRole  @default(ADMIN)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+enum UserRole {
+  ADMIN
+  STAFF
+}
+
+// Product Categories
+model Category {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  slug        String    @unique
+  description String?
+  products    Product[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+// Products
+model Product {
+  id             String      @id @default(cuid())
+  name           String
+  slug           String      @unique
+  description    String?
+  price          Float
+  compareAtPrice Float?
+  costPrice      Float?
+  sku            String?     @unique
+  stock          Int         @default(0)
+  images         String[]
+  categoryId     String?
+  category       Category?   @relation(fields: [categoryId], references: [id])
+  isActive       Boolean     @default(true)
+  isFeatured     Boolean     @default(false)
+  orderItems     OrderItem[]
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  @@index([categoryId])
+  @@index([slug])
+}
+
+// Customer Information
+model Customer {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  phone     String?
+  orders    Order[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Orders
+model Order {
+  id               String        @id @default(cuid())
+  orderNumber      String        @unique
+  customerId       String
+  customer         Customer      @relation(fields: [customerId], references: [id])
+  shippingName     String
+  shippingEmail    String
+  shippingPhone    String
+  shippingAddress  String
+  shippingCity     String
+  shippingRegion   String?
+  subtotal         Float
+  shippingCost     Float         @default(0)
+  total            Float
+  paymentMethod    String
+  paymentStatus    PaymentStatus @default(PENDING)
+  paymentReference String?       @unique
+  paidAt           DateTime?
+  status           OrderStatus   @default(PENDING)
+  notes            String?
+  items            OrderItem[]
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  @@index([customerId])
+  @@index([orderNumber])
+  @@index([status])
+}
+
+// Order Items
+model OrderItem {
+  id        String   @id @default(cuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  quantity  Int
+  price     Float
+  createdAt DateTime @default(now())
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
