@@ -3,7 +3,6 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
-// GET single category
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -14,8 +13,11 @@ export async function GET(
     const category = await prisma.category.findUnique({
       where: { id },
       include: {
+        filters: true, 
         _count: {
-          select: { products: true },
+          select: {
+            products: true,
+          },
         },
       },
     });
@@ -37,7 +39,6 @@ export async function GET(
   }
 }
 
-// PUT update category
 export async function PUT(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -58,7 +59,7 @@ export async function PUT(
       data: {
         name,
         slug,
-        description,
+        description: description || null,
       },
     });
 
@@ -72,7 +73,6 @@ export async function PUT(
   }
 }
 
-// DELETE category
 export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -87,18 +87,15 @@ export async function DELETE(
     const { id } = await params;
 
     // Check if category has products
-    const category = await prisma.category.findUnique({
-      where: { id },
-      include: {
-        _count: {
-          select: { products: true },
-        },
-      },
+    const productsCount = await prisma.product.count({
+      where: { categoryId: id },
     });
 
-    if (category && category._count.products > 0) {
+    if (productsCount > 0) {
       return NextResponse.json(
-        { error: "Cannot delete category with products" },
+        {
+          error: `Cannot delete category with ${productsCount} product(s). Remove products first.`,
+        },
         { status: 400 }
       );
     }

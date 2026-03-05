@@ -16,14 +16,27 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Plus, ExternalLink } from "lucide-react";
 import CreateCategoryDialog from "./create-category-dialog";
 import ImageUpload from "./image-upload";
+import ProductVariantManager from "./product-variants-manager";
 
 type Category = {
   id: string;
   name: string;
   slug: string;
+};
+
+type ProductVariant = {
+  id?: string;
+  name: string;
+  attributes: Record<string, string>;
+  price: string;
+  compareAtPrice: string;
+  costPrice: string;
+  stock: string;
+  sku: string;
 };
 
 type ProductFormProps = {
@@ -42,6 +55,17 @@ type ProductFormProps = {
     categoryId: string | null;
     isActive: boolean;
     isFeatured: boolean;
+    hasVariants: boolean;
+    variants?: Array<{
+      id: string;
+      name: string;
+      attributes: Record<string, string>;
+      price: number;
+      compareAtPrice: number | null;
+      costPrice: number | null;
+      stock: number;
+      sku: string | null;
+    }>;
   };
 };
 
@@ -68,6 +92,21 @@ export default function ProductForm({
   });
 
   const [images, setImages] = useState<string[]>(initialData?.images || []);
+  const [productType, setProductType] = useState<"simple" | "variant">(
+    initialData?.hasVariants ? "variant" : "simple",
+  );
+  const [variants, setVariants] = useState<ProductVariant[]>(
+    initialData?.variants?.map((v) => ({
+      id: v.id,
+      name: v.name,
+      attributes: v.attributes || {},
+      price: v.price.toString(),
+      compareAtPrice: v.compareAtPrice?.toString() || "",
+      costPrice: v.costPrice?.toString() || "",
+      stock: v.stock.toString(),
+      sku: v.sku || "",
+    })) || [],
+  );
 
   // Auto-generate slug from name
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -82,8 +121,43 @@ export default function ProductForm({
     });
   };
 
+  const handleCategoryCreated = (category: Category) => {
+    setCategories([...categories, category]);
+    setFormData({ ...formData, categoryId: category.id });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validate variants if product has variants
+    if (productType === "variant") {
+      if (variants.length === 0) {
+        alert("Please add at least one variant for this product");
+        return;
+      }
+
+      // Check each variant has price and stock
+      for (let i = 0; i < variants.length; i++) {
+        const v = variants[i];
+        const price = parseFloat(v.price);
+        const stock = parseInt(v.stock, 10);
+
+        if (!v.price || isNaN(price) || price <= 0) {
+          alert(
+            `Variant ${i + 1} (${v.name || "Unnamed"}): Please enter a valid price`,
+          );
+          return;
+        }
+
+        if (!v.stock || isNaN(stock) || stock < 0) {
+          alert(
+            `Variant ${i + 1} (${v.name || "Unnamed"}): Please enter a valid stock quantity`,
+          );
+          return;
+        }
+      }
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -92,15 +166,33 @@ export default function ProductForm({
         : "/api/products";
       const method = initialData ? "PUT" : "POST";
 
+      const payload = {
+        ...formData,
+        images: images,
+        hasVariants: productType === "variant",
+        variants:
+          productType === "variant"
+            ? variants.map((v) => ({
+                id: v.id,
+                name: v.name,
+                attributes: v.attributes,
+                price: parseFloat(v.price),
+                compareAtPrice: v.compareAtPrice
+                  ? parseFloat(v.compareAtPrice)
+                  : null,
+                costPrice: v.costPrice ? parseFloat(v.costPrice) : null,
+                stock: parseInt(v.stock, 10),
+                sku: v.sku || null,
+              }))
+            : [],
+      };
+
       const response = await fetch(url, {
         method,
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          ...formData,
-          images: images,
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (response.ok) {
@@ -112,7 +204,7 @@ export default function ProductForm({
       }
     } catch (error) {
       console.error("Error saving product:", error);
-      alert("Failed to save product");
+      alert(error instanceof Error ? error.message : "Failed to save product");
     } finally {
       setIsSubmitting(false);
     }
@@ -127,18 +219,18 @@ export default function ProductForm({
             <CardTitle>Basic Information</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className=" space-y-1">
+            <div className="space-y-1">
               <Label htmlFor="name">Product Name *</Label>
               <Input
                 id="name"
                 value={formData.name}
                 onChange={handleNameChange}
-                placeholder="e.g., Boys Cotton T-Shirt - Blue"
+                placeholder="e.g., Chanel No. 5"
                 required
               />
             </div>
 
-            <div className=" space-y-1">
+            <div className="space-y-1">
               <Label htmlFor="slug">Slug (URL) *</Label>
               <Input
                 id="slug"
@@ -146,7 +238,7 @@ export default function ProductForm({
                 onChange={(e) =>
                   setFormData({ ...formData, slug: e.target.value })
                 }
-                placeholder="boys-cotton-tshirt-blue"
+                placeholder="chanel-no-5"
                 required
               />
               <p className="text-sm text-gray-500 mt-1">
@@ -155,7 +247,7 @@ export default function ProductForm({
               </p>
             </div>
 
-            <div className=" space-y-1">
+            <div className="space-y-1">
               <Label htmlFor="description">Description</Label>
               <Textarea
                 id="description"
@@ -163,12 +255,12 @@ export default function ProductForm({
                 onChange={(e) =>
                   setFormData({ ...formData, description: e.target.value })
                 }
-                placeholder="Comfortable cotton t-shirt for boys aged 4-6 years..."
+                placeholder="Elegant floral perfume with timeless sophistication..."
                 rows={4}
               />
             </div>
 
-            <div className=" space-y-1">
+            <div className="space-y-1">
               <Label htmlFor="category">Category</Label>
               <div className="flex items-center justify-between">
                 <Select
@@ -205,11 +297,7 @@ export default function ProductForm({
                         New Category
                       </Button>
                     }
-                    onSuccess={(category) => {
-                      // Add to categories list and select it
-                      setCategories([...categories, category]);
-                      setFormData({ ...formData, categoryId: category.id });
-                    }}
+                    onSuccess={handleCategoryCreated}
                   />
 
                   <Button
@@ -230,8 +318,6 @@ export default function ProductForm({
           </CardContent>
         </Card>
 
-        {/* Image Upload */}
-
         {/* Product Images */}
         <Card>
           <CardHeader>
@@ -250,110 +336,154 @@ export default function ProductForm({
           </CardContent>
         </Card>
 
-        {/* Pricing */}
+        {/* Product Type Selection */}
         <Card>
           <CardHeader>
-            <CardTitle>Pricing</CardTitle>
+            <CardTitle>Product Type</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className=" space-y-1">
-                <Label htmlFor="price">Selling Price (GH₵) *</Label>
-                <Input
-                  id="price"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formData.price}
-                  onChange={(e) =>
-                    setFormData({ ...formData, price: e.target.value })
-                  }
-                  placeholder="45.00"
-                  required
-                />
+          <CardContent>
+            <RadioGroup
+              value={productType}
+              onValueChange={(value: "simple" | "variant") =>
+                setProductType(value)
+              }
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="simple" id="simple" />
+                <Label htmlFor="simple" className="font-normal cursor-pointer">
+                  Simple Product - Single price and stock
+                </Label>
               </div>
-
-              <div className=" space-y-1">
-                <Label htmlFor="compareAtPrice">Compare At Price (GH₵)</Label>
-                <Input
-                  id="compareAtPrice"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formData.compareAtPrice}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      compareAtPrice: e.target.value,
-                    })
-                  }
-                  placeholder="60.00"
-                />
-                <p className="text-sm text-gray-500 mt-1">
-                  Original price (for showing discounts)
-                </p>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="variant" id="variant" />
+                <Label htmlFor="variant" className="font-normal cursor-pointer">
+                  Product with Variants - Multiple sizes, colors, etc.
+                </Label>
               </div>
-
-              <div className=" space-y-1">
-                <Label htmlFor="costPrice">Cost Price (GH₵)</Label>
-                <Input
-                  id="costPrice"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formData.costPrice}
-                  onChange={(e) =>
-                    setFormData({ ...formData, costPrice: e.target.value })
-                  }
-                  placeholder="30.00"
-                />
-                <p className="text-sm text-gray-500 mt-1">
-                  Your cost (for profit tracking)
-                </p>
-              </div>
-            </div>
+            </RadioGroup>
           </CardContent>
         </Card>
 
-        {/* Inventory */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Inventory</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className=" space-y-1">
-                <Label htmlFor="sku">SKU (Stock Keeping Unit)</Label>
-                <Input
-                  id="sku"
-                  value={formData.sku}
-                  onChange={(e) =>
-                    setFormData({ ...formData, sku: e.target.value })
-                  }
-                  placeholder="KTS-2024-BL"
-                />
-                <p className="text-sm text-gray-500 mt-1">
-                  Your internal product code
-                </p>
-              </div>
+        {/* Simple Product: Pricing & Inventory */}
+        {productType === "simple" && (
+          <>
+            {/* Pricing */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Pricing</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-1">
+                    <Label htmlFor="price">Selling Price (GH₵) *</Label>
+                    <Input
+                      id="price"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={formData.price}
+                      onChange={(e) =>
+                        setFormData({ ...formData, price: e.target.value })
+                      }
+                      placeholder="45.00"
+                      required
+                    />
+                  </div>
 
-              <div className=" space-y-1">
-                <Label htmlFor="stock">Stock Quantity *</Label>
-                <Input
-                  id="stock"
-                  type="number"
-                  min="0"
-                  value={formData.stock}
-                  onChange={(e) =>
-                    setFormData({ ...formData, stock: e.target.value })
-                  }
-                  placeholder="10"
-                  required
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+                  <div className="space-y-1">
+                    <Label htmlFor="compareAtPrice">
+                      Compare At Price (GH₵)
+                    </Label>
+                    <Input
+                      id="compareAtPrice"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={formData.compareAtPrice}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          compareAtPrice: e.target.value,
+                        })
+                      }
+                      placeholder="60.00"
+                    />
+                    <p className="text-sm text-gray-500 mt-1">
+                      Original price (for showing discounts)
+                    </p>
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label htmlFor="costPrice">Cost Price (GH₵)</Label>
+                    <Input
+                      id="costPrice"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={formData.costPrice}
+                      onChange={(e) =>
+                        setFormData({ ...formData, costPrice: e.target.value })
+                      }
+                      placeholder="30.00"
+                    />
+                    <p className="text-sm text-gray-500 mt-1">
+                      Your cost (for profit tracking)
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Inventory */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Inventory</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <Label htmlFor="sku">SKU (Stock Keeping Unit)</Label>
+                    <Input
+                      id="sku"
+                      value={formData.sku}
+                      onChange={(e) =>
+                        setFormData({ ...formData, sku: e.target.value })
+                      }
+                      placeholder="CH5-50ML"
+                    />
+                    <p className="text-sm text-gray-500 mt-1">
+                      Your internal product code
+                    </p>
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label htmlFor="stock">Stock Quantity *</Label>
+                    <Input
+                      id="stock"
+                      type="number"
+                      min="0"
+                      value={formData.stock}
+                      onChange={(e) =>
+                        setFormData({ ...formData, stock: e.target.value })
+                      }
+                      placeholder="10"
+                      required
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </>
+        )}
+
+        {/* Variant Product: Variant Manager */}
+        {productType === "variant" && (
+          <ProductVariantManager
+            categoryId={formData.categoryId || null}
+            variants={variants}
+            onChange={setVariants}
+          />
+        )}
 
         {/* Status */}
         <Card>

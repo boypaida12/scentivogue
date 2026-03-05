@@ -64,7 +64,7 @@ export default function StoreNavbar() {
             href="/"
             className="text-2xl font-family-heading font-semibold transition-colors"
           >
-            Scenti Vogue
+            Scentivogue
           </Link>
 
           {/* Desktop Navigation */}

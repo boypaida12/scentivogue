@@ -5,8 +5,7 @@ import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { SidebarTrigger } from "@/components/ui/sidebar";
-import { Separator } from "@/components/ui/separator";
+import AdminHeader from "@/components/admin/admin-header";
 import {
   Package,
   ShoppingBag,
@@ -68,13 +67,7 @@ export default async function DashboardPage() {
   return (
     <>
       {/* Header with Sidebar Trigger */}
-      <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
-        <SidebarTrigger className="-ml-1" />
-        <Separator orientation="vertical" className="mr-2 h-4" />
-        <div className="flex items-center gap-2">
-          <h1 className="text-xl font-semibold">Dashboard</h1>
-        </div>
-      </header>
+      <AdminHeader title="Dashboard" />
 
       {/* Main Content */}
       <div className="flex-1 p-4 md:p-8">

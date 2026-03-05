@@ -4,6 +4,7 @@ import "./globals.css";
 import AuthSessionProvider from "@/components/providers/session-provider";
 import { CartProvider } from "@/lib/cart-context";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { Toaster } from "@/components/ui/sonner";
 
 // Sour Gummy for headings
 const playFairDisplay = Playfair_Display({
@@ -40,6 +41,7 @@ export default function RootLayout({
             <CartProvider>{children}</CartProvider>
           </AuthSessionProvider>
         </TooltipProvider>
+        <Toaster />
       </body>
     </html>
   );

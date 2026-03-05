@@ -9,7 +9,7 @@ export default function StoreFooter() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div className="space-y-4">
             <div>
-              <h3 className="text-xl font-bold mb-4">Scenti Vogue</h3>
+              <h3 className="text-xl font-bold mb-4">Scentivogue</h3>
               <p className="text-gray-400">
                 Your trusted perfume plug. Premium quality, easy ordering online.
               </p>
@@ -28,7 +28,7 @@ export default function StoreFooter() {
                   />
                 </Link> */}
                 <Link
-                  href="https://www.instagram.com/scentivogueandmore?igsh=MTRva2d5MTd5N2ZyYw=="
+                  href="https://www.instagram.com/scentivogue?igsh=MTRva2d5MTd5N2ZyYw=="
                   target="_blank"
                   className="w-fit"
                 >
@@ -40,7 +40,7 @@ export default function StoreFooter() {
                   />
                 </Link>
                 <Link
-                  href="https://www.tiktok.com/@scentivogueandmore"
+                  href="https://www.tiktok.com/@scentivogue"
                   target="_blank"
                   className="w-fit"
                 >
@@ -96,7 +96,7 @@ export default function StoreFooter() {
         </div>
         <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
           <p>
-            &copy; {new Date().getFullYear()} Scenti Vogue. All rights
+            &copy; {new Date().getFullYear()} Scentivogue. All rights
             reserved.
           </p>
         </div>

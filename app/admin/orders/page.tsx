@@ -3,8 +3,7 @@ import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import OrdersTable from "@/components/admin/orders-table";
-import { SidebarTrigger } from "@/components/ui/sidebar";
-import { Separator } from "@/components/ui/separator";
+import AdminHeader from "@/components/admin/admin-header";
 
 export default async function OrdersPage() {
   const session = await getServerSession(authOptions);
@@ -29,16 +28,7 @@ export default async function OrdersPage() {
 
   return (
     <>
-      <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
-        <SidebarTrigger className="-ml-1" />
-        <Separator orientation="vertical" className="mr-2 h-4" />
-        <div>
-          <h1 className="text-xl font-bold">Orders</h1>
-          <p className="text-gray-600">
-            Manage customer orders and fulfillment
-          </p>
-        </div>
-      </header>
+      <AdminHeader title="Orders" description="Manage customer orders and fulfillment"/>
       <div>
         <div className="max-w-7xl mx-auto">
           {/* Header */}

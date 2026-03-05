@@ -5,9 +5,9 @@ import { prisma } from "@/lib/prisma";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import CategoriesTable from "@/components/admin/categories-table";
-import CreateCategoryDialog from "@/components/admin/create-category-dialog";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
+import Link from "next/link";
 
 export default async function CategoriesPage() {
   const session = await getServerSession(authOptions);
@@ -44,14 +44,12 @@ export default async function CategoriesPage() {
           {/* Header */}
           <div className="flex justify-end items-center mb-8">
             <div className="flex gap-2">
-              <CreateCategoryDialog
-                trigger={
-                  <Button>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Category
-                  </Button>
-                }
-              />
+              <Button asChild>
+                <Link href="/admin/categories/new">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Category
+                </Link>
+              </Button>
             </div>
           </div>
 
@@ -59,14 +57,12 @@ export default async function CategoriesPage() {
           {categories.length === 0 ? (
             <div className="text-center py-12 border rounded-lg bg-white">
               <p className="text-gray-500 mb-4">No categories yet</p>
-              <CreateCategoryDialog
-                trigger={
-                  <Button>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Your First Category
-                  </Button>
-                }
-              />
+              <Button asChild>
+                <Link href="/admin/categories/new">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Your First Category
+                </Link>
+              </Button>
             </div>
           ) : (
             <CategoriesTable categories={categories} />
