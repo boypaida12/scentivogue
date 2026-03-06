@@ -96,7 +96,7 @@ export default function FaqSection() {
               <AccordionItem
                 key={index}
                 value={itemValue}
-                className={`rounded-xl overflow-hidden shadow-sm bg-white border-2 transition-colors duration-200 ${
+                className={`rounded-none overflow-hidden shadow-sm bg-white border-2 transition-colors duration-200 ${
                   isSelected
                     ? "border-black"
                     : "border-transparent"

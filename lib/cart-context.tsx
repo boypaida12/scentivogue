@@ -1,20 +1,29 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from "react";
 
-type CartItem = {
+export type CartItem = {
   id: string;
+  productId: string;
+  variantId: string | null;
   name: string;
+  variantName: string | null;
   price: number;
   quantity: number;
   slug: string;
-  image?: string;
+  image: string;
   stock: number;
 };
 
 type CartContextType = {
   items: CartItem[];
-  addItem: (item: CartItem) => void;
+  addItem: (item: Omit<CartItem, "id">) => void;
   removeItem: (id: string) => void;
   updateQuantity: (id: string, quantity: number) => void;
   clearCart: () => void;
@@ -25,11 +34,61 @@ type CartContextType = {
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export function CartProvider({ children }: { children: ReactNode }) {
-  // Initialize state with a function to read from localStorage immediately
+  // Initialize state with localStorage data
   const [items, setItems] = useState<CartItem[]>(() => {
     if (typeof window !== "undefined") {
-      const savedCart = localStorage.getItem("cart");
-      return savedCart ? JSON.parse(savedCart) : [];
+      try {
+        const savedCart = localStorage.getItem("cart");
+        if (!savedCart) return [];
+
+        const parsed: unknown = JSON.parse(savedCart);
+
+        // Type guard to ensure it's an array
+        if (!Array.isArray(parsed)) {
+          console.warn("Invalid cart data in localStorage, resetting cart");
+          return [];
+        }
+
+        // Migrate old cart format to new format with proper type checking
+        return parsed
+          .map((item: unknown) => {
+            // Type guard for each item
+            if (typeof item !== "object" || item === null) {
+              return null;
+            }
+
+            const cartItem = item as Record<string, unknown>;
+
+            return {
+              id: typeof cartItem.id === "string" ? cartItem.id : "",
+              productId:
+                typeof cartItem.productId === "string"
+                  ? cartItem.productId
+                  : typeof cartItem.id === "string"
+                    ? cartItem.id
+                    : "",
+              variantId:
+                typeof cartItem.variantId === "string"
+                  ? cartItem.variantId
+                  : null,
+              name: typeof cartItem.name === "string" ? cartItem.name : "",
+              variantName:
+                typeof cartItem.variantName === "string"
+                  ? cartItem.variantName
+                  : null,
+              price: typeof cartItem.price === "number" ? cartItem.price : 0,
+              quantity:
+                typeof cartItem.quantity === "number" ? cartItem.quantity : 1,
+              slug: typeof cartItem.slug === "string" ? cartItem.slug : "",
+              image: typeof cartItem.image === "string" ? cartItem.image : "",
+              stock: typeof cartItem.stock === "number" ? cartItem.stock : 999,
+            };
+          })
+          .filter((item): item is CartItem => item !== null && item.id !== "");
+      } catch (error) {
+        console.error("Error loading cart from localStorage:", error);
+        return [];
+      }
     }
     return [];
   });
@@ -37,25 +96,40 @@ export function CartProvider({ children }: { children: ReactNode }) {
   // Save cart to localStorage whenever it changes
   useEffect(() => {
     if (typeof window !== "undefined") {
-      localStorage.setItem("cart", JSON.stringify(items));
+      try {
+        localStorage.setItem("cart", JSON.stringify(items));
+      } catch (error) {
+        console.error("Error saving cart to localStorage:", error);
+      }
     }
   }, [items]);
 
-  const addItem = (newItem: CartItem) => {
+  const addItem = (newItem: Omit<CartItem, "id">) => {
     setItems((currentItems) => {
-      const existingItem = currentItems.find((item) => item.id === newItem.id);
+      // Create unique ID: use variantId if exists, otherwise productId
+      const itemId = newItem.variantId || newItem.productId;
 
-      if (existingItem) {
+      // Check if item already exists in cart
+      const existingItemIndex = currentItems.findIndex(
+        (item) => item.id === itemId
+      );
+
+      if (existingItemIndex > -1) {
         // Update quantity if item exists
-        return currentItems.map((item) =>
-          item.id === newItem.id
-            ? { ...item, quantity: Math.min(item.quantity + newItem.quantity, item.stock) }
-            : item
-        );
+        const updatedItems = [...currentItems];
+        const existingItem = updatedItems[existingItemIndex];
+        updatedItems[existingItemIndex] = {
+          ...existingItem,
+          quantity: Math.min(
+            existingItem.quantity + newItem.quantity,
+            newItem.stock
+          ),
+        };
+        return updatedItems;
       }
 
-      // Add new item
-      return [...currentItems, newItem];
+      // Add new item with generated id
+      return [...currentItems, { ...newItem, id: itemId }];
     });
   };
 
@@ -83,7 +157,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
   };
 
   const itemCount = items.reduce((total, item) => total + item.quantity, 0);
-  const total = items.reduce((total, item) => total + item.price * item.quantity, 0);
+  const total = items.reduce(
+    (total, item) => total + item.price * item.quantity,
+    0
+  );
 
   return (
     <CartContext.Provider

@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import CategoryFiltersForm from "@/components/admin/category-filters-form";
+import { toast } from "sonner";
 
 type FilterInput = {
   name: string;
@@ -50,14 +51,14 @@ export default function CategoryCreateForm() {
       if (response.ok) {
         const data = await response.json();
         setCategoryId(data.id);
-        alert("Category created! Now add filters (optional).");
+        toast.success("Category created! Now add filters (optional).");
       } else {
         const error = await response.json();
-        alert(error.error || "Failed to create category");
+        toast.error(error.error || "Failed to create category");
       }
     } catch (error) {
       console.error("Error creating category:", error);
-      alert("Failed to create category");
+      toast.error("Failed to create category");
     } finally {
       setIsSubmitting(false);
     }
@@ -76,7 +77,7 @@ export default function CategoryCreateForm() {
       throw new Error("Failed to save filters");
     }
 
-    alert("Filters saved successfully!");
+    toast.success("Filters saved successfully!");
     router.push("/admin/categories");
     router.refresh();
   };

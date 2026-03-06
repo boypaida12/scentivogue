@@ -6,16 +6,15 @@ import CartBadge from "./cart-badge";
 import { ShoppingCart } from "lucide-react";
 import { useCart } from "@/lib/cart-context";
 
-const navLinks = [
-  { href: "/products", label: "Shop" },
-  // { href: "/", label: "About" },
-  // { href: "/", label: "Blog" },
-];
+const navLinks = [{ href: "/products", label: "Shop" }];
 
 export default function StoreNavbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const { itemCount } = useCart();
+
+  // ✅ Check if we're on client side (no useEffect needed)
+  const isClient = typeof window !== "undefined";
 
   // Close menu when clicking on a link
   const closeMenu = () => setIsMenuOpen(false);
@@ -59,7 +58,6 @@ export default function StoreNavbar() {
         }`}
       >
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          {/* Logo */}
           <Link
             href="/"
             className="text-2xl font-family-heading font-semibold transition-colors"
@@ -67,7 +65,6 @@ export default function StoreNavbar() {
             Scentivogue
           </Link>
 
-          {/* Desktop Navigation */}
           <nav className="hidden md:flex gap-6 items-center">
             {navLinks.map((link) => (
               <Link
@@ -81,7 +78,6 @@ export default function StoreNavbar() {
             <CartBadge />
           </nav>
 
-          {/* Mobile Hamburger Button */}
           <button
             onClick={() => setIsMenuOpen(!isMenuOpen)}
             className="md:hidden p-2 rounded-md hover:bg-gray-100 transition-colors"
@@ -109,14 +105,12 @@ export default function StoreNavbar() {
         </div>
       </header>
 
-      {/* Mobile Menu */}
       <div
         className={`fixed top-18.25 right-0 left-0 bg-white z-51 transform transition-transform duration-300 ease-in-out md:hidden border-b shadow-lg ${
           isMenuOpen ? "translate-y-0" : "-translate-y-full"
         }`}
       >
         <div className="container mx-auto px-4 py-6 space-y-4">
-          {/* Navigation Links */}
           {navLinks.map((link) => (
             <Link
               key={link.label}
@@ -128,24 +122,27 @@ export default function StoreNavbar() {
             </Link>
           ))}
 
-          {/* Cart Button */}
           <div className="flex justify-center pt-2" onClick={closeMenu}>
             <CartBadge />
           </div>
         </div>
       </div>
-      <Link
-        href="/cart"
-        className="md:hidden fixed bottom-6 right-6 z-50 bg-black text-white rounded-none p-4 shadow-lg transition-all duration-200 hover:scale-110"
-        aria-label="View cart"
-      >
-        <ShoppingCart className="h-6 w-6" />
-        {itemCount > 0 && (
-          <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center">
-            {itemCount}
-          </span>
-        )}
-      </Link>
+
+      {/* Mobile Cart FAB - ✅ Only render on client */}
+      {isClient && (
+        <Link
+          href="/cart"
+          className="md:hidden fixed bottom-6 right-6 z-50 bg-black border border-gray-700 text-white rounded-none p-4 shadow-lg transition-all duration-200 hover:scale-110"
+          aria-label="View cart"
+        >
+          <ShoppingCart className="h-6 w-6" />
+          {itemCount > 0 && (
+            <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center">
+              {itemCount}
+            </span>
+          )}
+        </Link>
+      )}
     </>
   );
 }

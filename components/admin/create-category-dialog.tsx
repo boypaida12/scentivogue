@@ -15,6 +15,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { toast } from "sonner";
 
 type Category = {
   id: string;
@@ -83,14 +84,14 @@ export default function CreateCategoryDialog({
         // Refresh the page to show new category
         router.refresh();
 
-        alert("Category created successfully!");
+        toast.success("Category created successfully!");
       } else {
         const error = await response.json();
-        alert(error.error || "Failed to create category");
+        toast.error(error.error || "Failed to create category");
       }
     } catch (error) {
       console.error("Error creating category:", error);
-      alert("Failed to create category");
+      toast.error("Failed to create category");
     } finally {
       setIsCreating(false);
     }

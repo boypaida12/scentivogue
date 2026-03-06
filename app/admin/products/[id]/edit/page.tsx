@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import AdminHeader from "@/components/admin/admin-header";
 import ProductForm from "@/components/admin/product-form";
+import { transformProductWithVariants } from "@/lib/product-helpers";
 
 export default async function EditProductPage({
   params,
@@ -30,36 +31,11 @@ export default async function EditProductPage({
 
   if (!productData) notFound();
 
-  const product = {
-    id: productData.id,
-    name: productData.name,
-    slug: productData.slug,
-    description: productData.description,
-    price: productData.price,
-    compareAtPrice: productData.compareAtPrice,
-    costPrice: productData.costPrice,
-    sku: productData.sku,
-    stock: productData.stock,
-    images: productData.images,
-    categoryId: productData.categoryId,
-    isActive: productData.isActive,
-    isFeatured: productData.isFeatured,
-    hasVariants: productData.hasVariants,
-    variants: productData.variants.map((v) => ({
-      id: v.id,
-      name: v.name,
-      attributes: (v.attributes as Record<string, string>) || {},
-      price: v.price,
-      compareAtPrice: v.compareAtPrice,
-      costPrice: v.costPrice,
-      stock: v.stock,
-      sku: v.sku,
-    })),
-  };
+  const product = transformProductWithVariants(productData);
 
   return (
     <>
-      <AdminHeader title="Edit Product" description="Update product details"/>
+      <AdminHeader title="Edit Product" />
       <div className="p-4 md:p-8">
         <div className="max-w-4xl mx-auto">
           <ProductForm categories={categories} initialData={product} />

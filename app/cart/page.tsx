@@ -27,7 +27,7 @@ export default function CartPage() {
             <CardContent className="text-center py-12">
               <ShoppingCart className="h-16 w-16 text-gray-400 mx-auto mb-4" />
               <p className="text-gray-500 mb-4">Your cart is empty</p>
-              <Button asChild className="bg-[#FF8C00] hover:bg-[#FF8C00]">
+              <Button asChild className="bg-black hover:bg-white hover:text-black rounded-none border border-black">
                 <Link href="/products">Start Shopping</Link>
               </Button>
             </CardContent>
@@ -64,6 +64,11 @@ export default function CartPage() {
                           <h3 className="font-semibold hover:text-[#00AEEF]">
                             {item.name}
                           </h3>
+                          {item.variantName && (
+                            <p className="text-sm text-gray-500 mt-1">
+                              {item.variantName}
+                            </p>
+                          )}
                         </Link>
                         <p className="text-lg font-bold mt-1">
                           GH₵ {item.price.toFixed(2)}
@@ -129,16 +134,20 @@ export default function CartPage() {
                       <span className="text-gray-600">Items ({itemCount})</span>
                       <span>GH₵ {total.toFixed(2)}</span>
                     </div>
-                    <div className="flex justify-between">
+                    {/* <div className="flex justify-between">
                       <span className="text-gray-600">Shipping</span>
                       <span>Calculated at checkout</span>
-                    </div>
+                    </div> */}
                     <div className="border-t pt-3 flex justify-between text-lg font-bold">
                       <span>Total</span>
                       <span>GH₵ {total.toFixed(2)}</span>
                     </div>
                   </div>
-                  <Button size="lg" className="w-full bg-black rounded-none" asChild>
+                  <Button
+                    size="lg"
+                    className="w-full bg-black rounded-none"
+                    asChild
+                  >
                     <Link href="/checkout">Proceed to Checkout</Link>
                   </Button>
                 </CardContent>

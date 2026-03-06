@@ -80,9 +80,11 @@ export default function CheckoutPage() {
             region: formData.region,
           },
           items: items.map((item) => ({
-            productId: item.id,
+            productId: item.productId,
+            variantId: item.variantId, 
             quantity: item.quantity,
             price: item.price,
+            name: item.name, 
           })),
           notes: formData.notes,
           subtotal: total,
@@ -103,9 +105,7 @@ export default function CheckoutPage() {
       router.push(`/checkout/confirmation?orderNumber=${data.orderNumber}`);
     } catch (error) {
       console.error("COD error:", error);
-      alert(
-        error instanceof Error ? error.message : "Failed to place order"
-      );
+      alert(error instanceof Error ? error.message : "Failed to place order");
       setIsProcessing(false);
     }
   };
@@ -126,7 +126,8 @@ export default function CheckoutPage() {
             region: formData.region,
           },
           items: items.map((item) => ({
-            productId: item.id,
+            productId: item.productId,
+            variantId: item.variantId,
             quantity: item.quantity,
             price: item.price,
             name: item.name,
@@ -449,16 +450,14 @@ export default function CheckoutPage() {
                     ) : (
                       <>
                         <CreditCard className="h-5 w-5 mr-2" />
-                        {isProcessing
-                          ? "Processing..."
-                          : "Proceed to Payment"}
+                        {isProcessing ? "Processing..." : "Proceed to Payment"}
                       </>
                     )}
                   </Button>
 
                   {!isCOD && (
                     <div className="flex items-center gap-1 w-fit mx-auto">
-                      <LucideLock size={10} className="text-gray-500"/>
+                      <LucideLock size={10} className="text-gray-500" />
                       <p className="text-sm text-gray-500 text-center">
                         Secured by Paystack
                       </p>

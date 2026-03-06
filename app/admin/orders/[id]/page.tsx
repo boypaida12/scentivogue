@@ -38,6 +38,11 @@ export default async function OrderDetailPage({
       items: {
         include: {
           product: true,
+          variant: {
+            include: {
+              product: true,
+            },
+          },
         },
       },
     },
@@ -127,22 +132,38 @@ export default async function OrderDetailPage({
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {order.items.map((item) => (
-                      <TableRow key={item.id}>
-                        <TableCell className="font-medium">
-                          {item.product.name}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          GH₵ {item.price.toFixed(2)}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {item.quantity}
-                        </TableCell>
-                        <TableCell className="text-right font-medium">
-                          GH₵ {(item.price * item.quantity).toFixed(2)}
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {order.items.map((item) => {
+                      // Get product (either directly or through variant)
+                      const product = item.product || item.variant?.product;
+                      const variant = item.variant;
+
+                      let displayName = "Unknown Product";
+
+                      if (variant && product) {
+                        displayName = `${product.name} (${variant.name})`;
+                      } else if (product) {
+                        displayName = product.name;
+                      } else if (variant) {
+                        displayName = variant.name;
+                      }
+
+                      return (
+                        <TableRow key={item.id}>
+                          <TableCell className="font-medium">
+                            {displayName}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            GH₵ {item.price.toFixed(2)}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {item.quantity}
+                          </TableCell>
+                          <TableCell className="text-right font-medium">
+                            GH₵ {(item.price * item.quantity).toFixed(2)}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
 

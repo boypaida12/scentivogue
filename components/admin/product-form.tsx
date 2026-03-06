@@ -21,6 +21,7 @@ import { Plus, ExternalLink } from "lucide-react";
 import CreateCategoryDialog from "./create-category-dialog";
 import ImageUpload from "./image-upload";
 import ProductVariantManager from "./product-variants-manager";
+import { toast } from "sonner";
 
 type Category = {
   id: string;
@@ -132,7 +133,7 @@ export default function ProductForm({
     // Validate variants if product has variants
     if (productType === "variant") {
       if (variants.length === 0) {
-        alert("Please add at least one variant for this product");
+        toast.error("Please add at least one variant for this product");
         return;
       }
 
@@ -143,14 +144,14 @@ export default function ProductForm({
         const stock = parseInt(v.stock, 10);
 
         if (!v.price || isNaN(price) || price <= 0) {
-          alert(
+          toast.error(
             `Variant ${i + 1} (${v.name || "Unnamed"}): Please enter a valid price`,
           );
           return;
         }
 
         if (!v.stock || isNaN(stock) || stock < 0) {
-          alert(
+          toast.error(
             `Variant ${i + 1} (${v.name || "Unnamed"}): Please enter a valid stock quantity`,
           );
           return;
@@ -200,7 +201,7 @@ export default function ProductForm({
         router.refresh();
       } else {
         const error = await response.json();
-        alert(error.error || "Failed to save product");
+        toast.error(error.error || "Failed to save product");
       }
     } catch (error) {
       console.error("Error saving product:", error);
@@ -208,6 +209,7 @@ export default function ProductForm({
     } finally {
       setIsSubmitting(false);
     }
+    toast.success("Product succesfully added!")
   };
 
   return (

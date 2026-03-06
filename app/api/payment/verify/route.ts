@@ -3,8 +3,10 @@ import { prisma } from "@/lib/prisma";
 
 type WebhookItem = {
   productId: string;
+  variantId?: string | null;
   quantity: number;
   price: number;
+  name: string;
 };
 
 export async function GET(request: Request) {
@@ -44,7 +46,10 @@ export async function GET(request: Request) {
 
     const paystackData = await paystackResponse.json();
 
-    console.log("Paystack verify response:", JSON.stringify(paystackData.data?.metadata, null, 2));
+    console.log(
+      "Paystack verify response:",
+      JSON.stringify(paystackData.data?.metadata, null, 2)
+    );
 
     if (!paystackData.status || paystackData.data.status !== "success") {
       return NextResponse.json({ success: false });
@@ -53,14 +58,8 @@ export async function GET(request: Request) {
     const { metadata, customer: paystackCustomer } = paystackData.data;
     const email = paystackCustomer.email;
 
-    const {
-      customerName,
-      customerPhone,
-      shipping,
-      items,
-      paymentMethod,
-      notes,
-    } = metadata;
+    const { customerName, customerPhone, shipping, items, paymentMethod, notes } =
+      metadata;
 
     // Parse numbers explicitly - Paystack metadata returns strings
     const subtotal = parseFloat(metadata.subtotal);
@@ -85,7 +84,7 @@ export async function GET(request: Request) {
     // Generate order number
     const orderNumber = `ORD-${Date.now()}`;
 
-    // Create order as fallback
+    // Create order with variant support
     const newOrder = await prisma.order.create({
       data: {
         orderNumber,
@@ -106,25 +105,47 @@ export async function GET(request: Request) {
         status: "PROCESSING",
         notes: notes || null,
         items: {
-          create: items.map((item: WebhookItem) => ({
-            productId: item.productId,
+          create: (items as WebhookItem[]).map((item) => ({
+            productId: item.variantId ? null : item.productId,  // ✅ null if variant
+            variantId: item.variantId || null,                  // ✅ Save variantId
             quantity: parseInt(String(item.quantity)),
             price: parseFloat(String(item.price)),
           })),
         },
       },
-    });
-
-    // Reduce stock
-    for (const item of items as WebhookItem[]) {
-      await prisma.product.update({
-        where: { id: item.productId },
-        data: {
-          stock: {
-            decrement: parseInt(String(item.quantity)),
+      include: {
+        items: {
+          include: {
+            product: true,
+            variant: true,  // ✅ Include variant
           },
         },
-      });
+      },
+    });
+
+    // Reduce stock (handle both products and variants)
+    for (const item of items as WebhookItem[]) {
+      if (item.variantId) {
+        // Reduce variant stock
+        await prisma.productVariant.update({
+          where: { id: item.variantId },
+          data: {
+            stock: {
+              decrement: parseInt(String(item.quantity)),
+            },
+          },
+        });
+      } else {
+        // Reduce product stock
+        await prisma.product.update({
+          where: { id: item.productId },
+          data: {
+            stock: {
+              decrement: parseInt(String(item.quantity)),
+            },
+          },
+        });
+      }
     }
 
     console.log("✅ Order created via fallback verify:", newOrder.orderNumber);

@@ -40,7 +40,7 @@ export default function ProductImageGallery({
   return (
     <div className="space-y-3">
       {/* Main Image */}
-      <div className="relative aspect-square bg-gray-100 rounded-lg overflow-hidden group">
+      <div className="relative aspect-square bg-gray-100 overflow-hidden group">
         <Image
           src={images[selectedIndex]}
           alt={`${productName} - Image ${selectedIndex + 1}`}

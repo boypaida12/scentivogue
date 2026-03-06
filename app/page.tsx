@@ -22,7 +22,7 @@ export default async function HomePage() {
       isActive: true,
       isFeatured: true,
     },
-    include: { category: true },
+    include: { category: true, variants: true },
     orderBy: { createdAt: "desc" },
     take: 8,
   });
@@ -32,27 +32,27 @@ export default async function HomePage() {
       isActive: true,
       createdAt: { gte: thirtyDaysAgo },
     },
-    include: { category: true },
+    include: { category: true, variants: true },
     orderBy: { createdAt: "desc" },
     take: 8,
   });
 
   const allProducts = await prisma.product.findMany({
     where: { isActive: true },
-    include: { category: true },
+    include: { category: true, variants: true },
     orderBy: { createdAt: "desc" },
     take: 10,
   });
 
   const yourImageUrl =
-    "https://res.cloudinary.com/dciojpfwx/image/upload/v1772631676/sc-p1_gjfvwl.webp";
+    "https://res.cloudinary.com/dciojpfwx/image/upload/v1772812253/ulysse-pointcheval--j6LLsAehUo-unsplash_losqkd.jpg";
 
   return (
     <StoreLayout>
       {/* ── Hero ────────────────────────────────────────── */}
       <section
         style={{ backgroundImage: `url(${yourImageUrl})` }}
-        className="relative py-20 bg-cover bg-bottom md:min-h-[78vh] flex flex-col items-center justify-center after:absolute after:inset-0 after:content-[''] after:bg-black/70 after:opacity-50 after:z-10"
+        className="relative py-20 bg-cover bg-center md:min-h-[78vh] flex flex-col items-center justify-center after:absolute after:inset-0 after:content-[''] after:bg-black/70 after:opacity-50 after:z-10"
       >
         <div className="md:w-3xl mx-auto px-4 text-center z-50">
           <h1 className="text-5xl font-bold mb-4 text-white">
@@ -64,7 +64,7 @@ export default async function HomePage() {
           <Link href="/products">
             <Button
               size="lg"
-              className="bg-black border border-black rounded-none hover:bg-transparent hover:border-white text-white cursor-pointer"
+              className="bg-black border border-white rounded-none hover:bg-transparent text-white cursor-pointer"
             >
               <ShoppingBag />
               Shop Now
@@ -106,7 +106,7 @@ export default async function HomePage() {
                   {featuredProducts.map((product) => (
                     <CarouselItem
                       key={product.id}
-                      className="max-[24rem]:basis-2/3 max-md:basis-1/2 basis-1/3 xl:basis-1/4"
+                      className="max-[24rem]:basis-2/3 max-md:basis-1/2 basis-1/4 xl:basis-1/6"
                     >
                       <ProductCard product={product} />
                     </CarouselItem>
@@ -155,7 +155,7 @@ export default async function HomePage() {
                   {newArrivals.map((product) => (
                     <CarouselItem
                       key={product.id}
-                      className="max-[24rem]:basis-2/3 max-md:basis-1/2 basis-1/3 xl:basis-1/4"
+                      className="max-[24rem]:basis-2/3 max-md:basis-1/2 basis-1/4 xl:basis-1/6"
                     >
                       <ProductCard product={product} />
                     </CarouselItem>

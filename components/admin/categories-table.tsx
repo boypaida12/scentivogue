@@ -23,6 +23,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
 
 type Category = {
   id: string;
@@ -57,11 +58,11 @@ export default function CategoriesTable({
         setDeleteId(null);
       } else {
         const error = await response.json();
-        alert(error.error || "Failed to delete category");
+        toast.error(error.error || "Failed to delete category");
       }
     } catch (error) {
       console.error("Error deleting category:", error);
-      alert("Failed to delete category");
+      toast.error("Failed to delete category");
     } finally {
       setIsDeleting(false);
     }

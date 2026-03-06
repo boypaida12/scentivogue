@@ -213,18 +213,20 @@ export default function CategoryFiltersForm({
             </AlertDialogTitle>
             <AlertDialogDescription className="space-y-3">
               <span>You are about to save the following filters:</span>
-              
-              <div className="bg-gray-50 rounded-lg p-4 space-y-2 max-h-60 overflow-y-auto">
+              <br/>
+              <br/>
+              <span className="bg-gray-50 rounded-lg p-4 space-y-2 max-h-60 overflow-y-auto">
                 {validFilters.map((filter, index) => (
-                  <div key={index} className="text-sm">
+                  <span key={index} className="text-sm">
                     <span className="font-semibold text-red-600">{filter.name}</span>
                     <span className="text-gray-600 ml-4">
                       {filter.options.join(", ")}
                     </span>
-                  </div>
+                  </span>
                 ))}
-              </div>
-              
+              </span>
+              <br/>
+              <br/>
               <span className="text-sm font-medium text-orange-600">
                 ⚠️ Please double-check the spelling of filter names (shown in red above).
               </span>
