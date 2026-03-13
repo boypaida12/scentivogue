@@ -22,13 +22,15 @@ export default function AddToCartButton({ product }: { product: Product }) {
 
   const handleAddToCart = () => {
     setIsAdding(true);
-    addItem({
-      id: product.id,
+     addItem({
+      productId: product.id, // ✅ Changed from 'id' to 'productId'
+      variantId: null, // ✅ Add this (null for simple products)
       name: product.name,
+      variantName: null, // ✅ Add this (null for simple products)
       price: product.price,
       quantity,
       slug: product.slug,
-      image: product.images[0],
+      image: product.images[0] || "",
       stock: product.stock,
     });
 

@@ -13,27 +13,23 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Eye } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { Prisma } from "@prisma/client";
 
-type Order = {
-  id: string;
-  orderNumber: string;
-  customer: {
-    name: string;
-    email: string;
-  };
-  total: number;
-  status: string;
-  paymentStatus: string;
-  paymentMethod: string;
-  createdAt: Date;
-  items: {
-    id: string;
-    quantity: number;
-    product: {
-      name: string;
+type Order = Prisma.OrderGetPayload<{
+  include: {
+    customer: true;
+    items: {
+      include: {
+        product: true;
+        variant: {
+          include: {
+            product: true;
+          };
+        };
+      };
     };
-  }[];
-};
+  };
+}>;
 
 export default function OrdersTable({ orders }: { orders: Order[] }) {
   const getStatusColor = (status: string) => {

@@ -18,6 +18,11 @@ export default async function OrdersPage() {
       items: {
         include: {
           product: true,
+           variant: { 
+            include: {
+              product: true,
+            },
+          },
         },
       },
     },

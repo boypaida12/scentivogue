@@ -163,8 +163,7 @@ export async function POST(request: Request) {
           name: v.name,
           price: v.price,
           stock: v.stock,
-          size: v.size,
-          color: v.color,
+          variants: v.attributes
         });
       });
       console.log("========================================");
