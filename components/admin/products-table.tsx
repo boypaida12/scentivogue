@@ -26,6 +26,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
+import React from "react";
 
 type Product = {
   id: string;
@@ -150,8 +151,8 @@ export default function ProductsTable({ products }: { products: Product[] }) {
                 product.variants.length > 0;
 
               return (
-                <>
-                  <TableRow key={product.id}>
+                <React.Fragment key={product.id}>
+                  <TableRow>
                     <TableCell>
                       {hasVariants && (
                         <Button
@@ -286,7 +287,7 @@ export default function ProductsTable({ products }: { products: Product[] }) {
                         <TableCell></TableCell>
                       </TableRow>
                     ))}
-                </>
+                </React.Fragment>
               );
             })}
           </TableBody>

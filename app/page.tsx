@@ -45,7 +45,7 @@ export default async function HomePage() {
   });
 
   const yourImageUrl =
-    "https://res.cloudinary.com/dciojpfwx/image/upload/v1772812253/ulysse-pointcheval--j6LLsAehUo-unsplash_losqkd.jpg";
+    "https://res.cloudinary.com/dciojpfwx/image/upload/v1773667150/perfume-bg_wr2ytn.jpg";
 
   return (
     <StoreLayout>

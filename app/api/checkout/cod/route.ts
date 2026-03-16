@@ -3,9 +3,10 @@ import { prisma } from "@/lib/prisma";
 
 type CODItem = {
   productId: string;
-  variantId: string;
+  variantId?: string | null;
   quantity: number;
   price: number;
+  name: string;
 };
 
 type CODBody = {
@@ -92,12 +93,25 @@ export async function POST(request: Request) {
         status: "PENDING",
         notes: notes || null,
         items: {
-          create: items.map((item: CODItem) => ({
-            productId: item.variantId ? null : item.productId,
-            variantId: item.variantId || null,
-            quantity: item.quantity,
-            price: item.price,
-          })),
+          create: items.map((item) => {
+            const orderItemData = {
+              productId: item.variantId ? null : item.productId,  // ✅ null if variant
+              variantId: item.variantId || null,                  // ✅ Save variantId
+              quantity: parseInt(String(item.quantity)),
+              price: parseFloat(String(item.price)),
+            };
+
+            console.log("  📦 Creating OrderItem:", orderItemData);
+            return orderItemData;
+          }),
+        },
+      },
+      include: {
+        items: {
+          include: {
+            product: true,
+            variant: true,
+          },
         },
       },
     });
@@ -105,15 +119,27 @@ export async function POST(request: Request) {
     // Reduce product stock
     for (const item of items) {
       if (item.variantId) {
+        // Reduce variant stock
         await prisma.productVariant.update({
           where: { id: item.variantId },
-          data: { stock: { decrement: item.quantity } },
+          data: {
+            stock: {
+              decrement: item.quantity,
+            },
+          },
         });
+        console.log(`  ✅ Reduced variant ${item.variantId} stock by ${item.quantity}`);
       } else {
+        // Reduce product stock (simple products only)
         await prisma.product.update({
           where: { id: item.productId },
-          data: { stock: { decrement: item.quantity } },
+          data: {
+            stock: {
+              decrement: item.quantity,
+            },
+          },
         });
+        console.log(`  ✅ Reduced product ${item.productId} stock by ${item.quantity}`);
       }
     }
 

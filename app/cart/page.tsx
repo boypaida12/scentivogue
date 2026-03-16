@@ -62,7 +62,7 @@ export default function CartPage() {
                       <div className="flex-1">
                         <Link href={`/products/${item.slug}`}>
                           <h3 className="font-semibold hover:text-[#00AEEF]">
-                            {item.name}
+                            {item.name} ({item.variantName})
                           </h3>
                           {item.variantName && (
                             <p className="text-sm text-gray-500 mt-1">

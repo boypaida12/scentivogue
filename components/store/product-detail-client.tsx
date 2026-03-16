@@ -12,7 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { ShoppingCart, Heart } from "lucide-react";
+import { ShoppingCart } from "lucide-react";
 import { useCart } from "@/lib/cart-context";
 import { toast } from "sonner";
 
@@ -379,9 +379,9 @@ export default function ProductDetailClient({ product }: { product: Product }) {
                 <ShoppingCart className="mr-2 h-5 w-5" />
                 {isOutOfStock ? "Out of Stock" : "Add to Cart"}
               </Button>
-              <Button size="lg" variant="outline">
+              {/* <Button size="lg" variant="outline">
                 <Heart className="h-5 w-5" />
-              </Button>
+              </Button> */}
             </div>
           </div>
 

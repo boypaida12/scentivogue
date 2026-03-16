@@ -13,8 +13,12 @@ export default function StoreNavbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const { itemCount } = useCart();
 
-  // ✅ Check if we're on client side (no useEffect needed)
-  const isClient = typeof window !== "undefined";
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMounted(true);
+  }, []);
 
   // Close menu when clicking on a link
   const closeMenu = () => setIsMenuOpen(false);
@@ -129,7 +133,8 @@ export default function StoreNavbar() {
       </div>
 
       {/* Mobile Cart FAB - ✅ Only render on client */}
-      {isClient && (
+      {/* Mobile Cart FAB */}
+      {mounted && (
         <Link
           href="/cart"
           className="md:hidden fixed bottom-6 right-6 z-50 bg-black border border-gray-700 text-white rounded-none p-4 shadow-lg transition-all duration-200 hover:scale-110"
