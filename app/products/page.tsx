@@ -6,13 +6,13 @@ import { Loader2 } from "lucide-react";
 import StoreLayout from "@/components/store/store-layout";
 import ProductCard from "@/components/store/product-card";
 import ProductFilters from "@/components/store/product-filters";
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
-} from "@/components/ui/carousel";
+// import {
+//   Carousel,
+//   CarouselContent,
+//   CarouselItem,
+//   CarouselNext,
+//   CarouselPrevious,
+// } from "@/components/ui/carousel";
 
 type SearchParams = {
   category?: string;
@@ -184,8 +184,13 @@ async function ProductsContent({
               </Button>
             </div>
           ) : (
-            <div className="relative">
-              <Carousel
+            <div className="relative grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+              {filteredProducts.map((product) => (
+                <div key={product.id}>
+                  <ProductCard product={product} />
+                </div>
+              ))}
+              {/* <Carousel
                 opts={{
                   align: "start",
                   loop: false,
@@ -205,7 +210,7 @@ async function ProductsContent({
                   <CarouselPrevious className="static translate-y-0 text-black" />
                   <CarouselNext className="static translate-y-0 text-black" />
                 </div>
-              </Carousel>
+              </Carousel> */}
             </div>
           )}
         </main>

@@ -11,44 +11,29 @@ import { Button } from "@/components/ui/button";
 
 const FAQS = [
   {
-    question: "What age range do your products cater to?",
+    question: "where do you geet your perfume oils from?",
     answer:
-      "Our products cater to newborns all the way up to teenagers. We also stock essentials for expectant and new mums. Each product listing includes age and size recommendations to help you choose the right fit.",
+      "They are sourced from Dubai and France.",
   },
   {
-    question: "How do I place an order?",
+    question: "How long does your perfume oils last?",
     answer:
-      "Simply browse our store, add items to your cart, and proceed to checkout. You can pay securely via Mobile Money (MTN, Vodafone, AirtelTigo), bank card, or choose Cash on Delivery for orders under GH₵ 200.",
+      "72 hours in the clothes and 12 hours on the skin.",
   },
   {
-    question: "Do you offer Cash on Delivery?",
+    question: "How many frangrances have you got for your perfume oils?",
     answer:
-      "Yes! We offer Cash on Delivery for orders under GH₵ 200 within our delivery areas. Simply select 'Cash on Delivery' at checkout and have the exact amount ready when your order arrives.",
+      "Over 100 frangrances to choose from.",
   },
   {
-    question: "How long does delivery take?",
+    question: "Do you wholesalee your perfume oils?",
     answer:
-      "Delivery within Accra typically takes 1-3 business days. Orders outside Accra may take 3-5 business days. You will receive a call from our team to confirm your delivery schedule.",
+      "We are one of the biggest suppliers of perfume oils in Ghana. We wholesale to retailers and individuals. Contact us for wholesale prices.",
   },
   {
-    question: "Is free delivery available?",
+    question: "Where are your from frangrances made?",
     answer:
-      "Yes! We offer free delivery on all orders above GH₵ 200 within Accra.",
-  },
-  {
-    question: "Can I return or exchange a product?",
-    answer:
-      "Please contact us via whatsapp 0245354884 or email mommysoasis25@gmail.com with your order number to initiate a return.",
-  },
-  {
-    question: "How do I track my order?",
-    answer:
-      "After placing your order, you will receive an order confirmation with your order number. Our team will contact you directly to provide delivery updates. You can also reach out to us with your order number for a status update.",
-  },
-  {
-    question: "Are your products authentic and safe for children?",
-    answer:
-      "Absolutely. We carefully curate all products to ensure they meet quality and safety standards suitable for babies and children. We only stock from trusted suppliers and brands.",
+      "They are proudly made in Ghana with the best quality ingredients. We have a wide range of frangrances to choose from.",
   },
 ];
 

@@ -108,7 +108,7 @@ export default function ProductFilters({ filters }: ProductFiltersProps) {
         )}
       </div>
 
-      <Accordion type="multiple" defaultValue={filters.map((f) => f.name)}>
+      <Accordion type="multiple">
         {filters.map((filter) => (
           <AccordionItem key={filter.name} value={filter.name}>
             <AccordionTrigger className="text-sm font-medium">

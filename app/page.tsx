@@ -1,3 +1,5 @@
+export const revalidate = 60;
+
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -38,7 +40,7 @@ export default async function HomePage() {
   });
 
   const allProducts = await prisma.product.findMany({
-    where: { isActive: true },
+    where: { isActive: true, createdAt: { lt: thirtyDaysAgo } },
     include: { category: true, variants: true },
     orderBy: { createdAt: "desc" },
     take: 10,
@@ -52,14 +54,14 @@ export default async function HomePage() {
       {/* ── Hero ────────────────────────────────────────── */}
       <section
         style={{ backgroundImage: `url(${yourImageUrl})` }}
-        className="relative py-20 bg-cover bg-center md:min-h-[78vh] flex flex-col items-center justify-center after:absolute after:inset-0 after:content-[''] after:bg-black/70 after:opacity-50 after:z-10"
+        className="relative py-20 bg-cover bg-center md:min-h-[78vh] flex flex-col items-center justify-center after:absolute after:inset-0 after:content-[''] after:bg-black/90 after:opacity-70 after:z-10"
       >
         <div className="md:w-3xl mx-auto px-4 text-center z-50">
-          <h1 className="text-5xl font-bold mb-4 text-white">
-            Your trusted perfume plug.
+          <h1 className="lg:text-7xl font-bold mb-4 text-white">
+            Smell Like a Billionaire
           </h1>
-          <p className="text-xl text-white mb-8">
-            Premium quality, easy ordering online.
+          <p className="text-xl text-white mb-8 md:w-2xl mx-auto">
+            Scentivogue is dedicated to giving you the best experience with regards to your smell. We sell Perfume oils, Eau de parfum, Body splashes and Home fragrances. Wholesale and Retail.
           </p>
           <Link href="/products">
             <Button
@@ -144,7 +146,7 @@ export default async function HomePage() {
               </Button>
             </div>
 
-            <div className="relative">
+            <div className="relative max-md:hidden">
               <Carousel
                 opts={{
                   align: "start",
@@ -167,12 +169,77 @@ export default async function HomePage() {
                 </div>
               </Carousel>
             </div>
+            <div className="relative grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:hidden">
+              {newArrivals.map((product) => (
+                <div key={product.id}>
+                  <ProductCard product={product} />
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ── All products ─────────────────────────────────── */}
+      {allProducts.length > 0 && (
+        <section className="py-16 bg-gray-50">
+          <div className="container mx-auto px-4">
+            <div className="flex justify-between items-center mb-16">
+              <div>
+                <h2 className="max-sm:text-2xl text-3xl font-bold">
+                  All Products
+                </h2>
+                <p className="text-gray-500 text-sm mt-1">
+                  View our full range of baby and mum essentials
+                </p>
+              </div>
+              <Button
+                asChild
+                className="bg-black border border-black rounded-none hover:bg-transparent hover:text-black cursor-pointer"
+              >
+                <Link href="/products" className="flex items-center gap-1">
+                  See More
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              </Button>
+            </div>
+
+            <div className="relative max-md:hidden">
+              <Carousel
+                opts={{
+                  align: "start",
+                  loop: false,
+                }}
+              >
+                <CarouselContent className="py-2">
+                  {allProducts.map((product) => (
+                    <CarouselItem
+                      key={product.id}
+                      className="max-[24rem]:basis-2/3 max-md:basis-3/5 basis-1/4 xl:basis-1/5"
+                    >
+                      <ProductCard product={product} />
+                    </CarouselItem>
+                  ))}
+                </CarouselContent>
+                <div className="absolute -top-12 right-0 flex gap-2">
+                  <CarouselPrevious className="static translate-y-0" />
+                  <CarouselNext className="static translate-y-0" />
+                </div>
+              </Carousel>
+            </div>
+            <div className="relative grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:hidden">
+              {allProducts.map((product) => (
+                <div key={product.id}>
+                  <ProductCard product={product} />
+                </div>
+              ))}
+            </div>
           </div>
         </section>
       )}
 
       {/* ── Empty State ───────────────────────────────────── */}
-      {allProducts.length === 0 && (
+      {allProducts.length === 0 && newArrivals.length === 0 && (
         <section className="py-20">
           <div className="container mx-auto px-4 text-center">
             <div className="bg-gray-50 rounded-lg py-16">
