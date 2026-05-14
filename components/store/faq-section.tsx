@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 
 const FAQS = [
   {
-    question: "where do you geet your perfume oils from?",
+    question: "Where do you get your perfume oils from?",
     answer:
       "They are sourced from Dubai and France.",
   },
@@ -21,17 +21,17 @@ const FAQS = [
       "72 hours in the clothes and 12 hours on the skin.",
   },
   {
-    question: "How many frangrances have you got for your perfume oils?",
+    question: "How many fragrances have you got for your perfume oils?",
     answer:
       "Over 100 frangrances to choose from.",
   },
   {
-    question: "Do you wholesalee your perfume oils?",
+    question: "Do you wholesale your perfume oils?",
     answer:
       "We are one of the biggest suppliers of perfume oils in Ghana. We wholesale to retailers and individuals. Contact us for wholesale prices.",
   },
   {
-    question: "Where are your from frangrances made?",
+    question: "Where are your fragrances made?",
     answer:
       "They are proudly made in Ghana with the best quality ingredients. We have a wide range of frangrances to choose from.",
   },

@@ -294,11 +294,11 @@ export default function CheckoutPage() {
                         <SelectItem value="card">
                           💳 Bank Card (Visa, Mastercard)
                         </SelectItem>
-                        {isCODAvailable && (
+                        {/* {isCODAvailable && (
                           <SelectItem value="cod">
                             🤝 Cash on Delivery
                           </SelectItem>
-                        )}
+                        )} */}
                       </SelectContent>
                     </Select>
                   </div>
