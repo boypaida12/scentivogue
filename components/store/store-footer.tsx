@@ -52,7 +52,7 @@ export default function StoreFooter() {
                   />
                 </Link>
                 <Link
-                  href="https://wa.me/0560132489"
+                  href="https://wa.me/233560132489"
                   target="_blank"
                   className="w-fit"
                 >
