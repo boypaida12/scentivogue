@@ -4,15 +4,8 @@ import { useState, useMemo } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { ShoppingCart } from "lucide-react";
+import { ShoppingCart, Plus, Minus } from "lucide-react";
 import { useCart } from "@/lib/cart-context";
 import { toast } from "sonner";
 
@@ -46,142 +39,98 @@ type Product = {
 export default function ProductDetailClient({ product }: { product: Product }) {
   const { addItem } = useCart();
   const [selectedImage, setSelectedImage] = useState(0);
-  const [quantity, setQuantity] = useState(1);
 
-  // For variant products, track selected attributes
-  const [selectedAttributes, setSelectedAttributes] = useState<
-    Record<string, string>
-  >(() => {
-    if (!product.hasVariants || product.variants.length === 0) {
-      return {};
+  // For multi-select bundles: Map<variantId, quantity>
+  const [selectedVariants, setSelectedVariants] = useState<Map<string, number>>(
+    new Map(),
+  );
+
+  // Toggle variant selection
+  const toggleVariant = (variantId: string) => {
+    const newSelected = new Map(selectedVariants);
+    if (newSelected.has(variantId)) {
+      newSelected.delete(variantId);
+    } else {
+      newSelected.set(variantId, 1);
     }
-
-    // Find first variant with stock
-    const inStockVariant = product.variants.find((v) => v.stock > 0);
-
-    if (inStockVariant) {
-      // Return attributes from first in-stock variant
-      return inStockVariant.attributes;
-    }
-
-    // All out of stock - return first variant's attributes as fallback
-    return product.variants[0]?.attributes || {};
-  });
-
-  // Get all unique attribute names from variants
-  const attributeNames = useMemo(() => {
-    if (!product.hasVariants || !product.variants.length) return [];
-
-    const names = new Set<string>();
-    product.variants.forEach((variant) => {
-      Object.keys(variant.attributes).forEach((key) => names.add(key));
-    });
-
-    return Array.from(names);
-  }, [product.hasVariants, product.variants]);
-
-  // Get available options for each attribute
-  const getAttributeOptions = (attributeName: string) => {
-    const options = new Set<string>();
-    product.variants.forEach((variant) => {
-      if (variant.attributes[attributeName]) {
-        options.add(variant.attributes[attributeName]);
-      }
-    });
-    return Array.from(options).sort();
+    setSelectedVariants(newSelected);
   };
 
-  // Find matching variant based on selected attributes
-  const selectedVariant = useMemo(() => {
-    if (!product.hasVariants) return null;
-
-    // If not all attributes are selected, return null
-    if (attributeNames.some((name) => !selectedAttributes[name])) {
-      return null;
+  // Update quantity for a selected variant
+  const updateVariantQuantity = (variantId: string, quantity: number) => {
+    const newSelected = new Map(selectedVariants);
+    if (quantity <= 0) {
+      newSelected.delete(variantId);
+    } else {
+      newSelected.set(variantId, quantity);
     }
+    setSelectedVariants(newSelected);
+  };
 
-    // Find variant that matches all selected attributes
-    return product.variants.find((variant) => {
-      return attributeNames.every(
-        (name) => variant.attributes[name] === selectedAttributes[name],
-      );
-    });
-  }, [
-    product.hasVariants,
-    product.variants,
-    attributeNames,
-    selectedAttributes,
-  ]);
-
-  // Get display price and stock
-  const displayData = useMemo(() => {
-    if (product.hasVariants) {
-      if (selectedVariant) {
-        return {
-          price: selectedVariant.price,
-          compareAtPrice: selectedVariant.compareAtPrice,
-          stock: selectedVariant.stock,
-          sku: selectedVariant.sku,
-        };
+  // Calculate bundle total
+  const bundleTotal = useMemo(() => {
+    let total = 0;
+    selectedVariants.forEach((qty, variantId) => {
+      const variant = product.variants.find((v) => v.id === variantId);
+      if (variant) {
+        total += variant.price * qty;
       }
+    });
+    return total;
+  }, [selectedVariants, product.variants]);
 
-      // Show price range if no variant selected
-      const prices = product.variants.map((v) => v.price);
-      return {
-        price: null,
-        priceRange: { min: Math.min(...prices), max: Math.max(...prices) },
-        compareAtPrice: null,
-        stock: 0,
-        sku: null,
-      };
-    }
+  // Get selected variant details for preview
+  const selectedVariantDetails = useMemo(() => {
+    const details: Array<{ variant: ProductVariant; quantity: number }> = [];
+    selectedVariants.forEach((qty, variantId) => {
+      const variant = product.variants.find((v) => v.id === variantId);
+      if (variant) {
+        details.push({ variant, quantity: qty });
+      }
+    });
+    return details.sort((a, b) => a.variant.name.localeCompare(b.variant.name));
+  }, [selectedVariants, product.variants]);
 
-    // Simple product
-    return {
-      price: product.price,
-      compareAtPrice: product.compareAtPrice,
-      stock: product.stock,
-      sku: null,
-    };
-  }, [product, selectedVariant]);
+  // Check if any variant is in stock
+  const hasInStock = product.variants.some((v) => v.stock > 0);
 
-  const isOutOfStock = displayData.stock === 0;
-  const hasDiscount =
-    displayData.compareAtPrice &&
-    displayData.compareAtPrice > (displayData.price || 0);
-
-  const handleAddToCart = () => {
-    if (product.hasVariants && !selectedVariant) {
-      toast.error("Please select all options", {
-        description:
-          "Choose size, color, or other options before adding to cart",
+  // Handle add to cart - adds multiple items at once
+  const handleAddBundleToCart = () => {
+    if (selectedVariants.size === 0) {
+      toast.error("Please select variants", {
+        description: "Select at least one variant to add to cart",
       });
       return;
     }
 
-    if (isOutOfStock) {
-      toast.error("Out of stock", {
-        description: "This product is currently unavailable",
-      });
-      return;
-    }
+    // Add each selected variant to cart
+    selectedVariants.forEach((quantity, variantId) => {
+      const variant = product.variants.find((v) => v.id === variantId);
+      if (variant && quantity > 0) {
+        if (quantity > variant.stock) {
+          toast.error(`Insufficient stock for ${variant.name}`);
+          return;
+        }
 
-    // Add to cart
-    addItem({
-      productId: product.id,
-      variantId: selectedVariant?.id || null,
-      name: product.name,
-      variantName: selectedVariant?.name || null,
-      price: displayData.price!,
-      slug: product.slug,
-      image: product.images[0] || "",
-      stock: displayData.stock,
-      quantity,
+        addItem({
+          productId: product.id,
+          variantId: variant.id,
+          name: product.name,
+          variantName: variant.name,
+          price: variant.price,
+          slug: product.slug,
+          image: product.images[0] || "",
+          stock: variant.stock,
+          quantity,
+        });
+      }
     });
 
-    toast.success("Added to cart!", {
-      description: `${quantity}x ${product.name}${selectedVariant ? ` (${selectedVariant.name})` : ""} added to your cart`,
+    toast.success("Bundle added to cart!", {
+      description: `${selectedVariants.size} variant(s) added to your cart`,
     });
+
+    setSelectedVariants(new Map());
   };
 
   return (
@@ -205,14 +154,10 @@ export default function ProductDetailClient({ product }: { product: Product }) {
               </div>
             )}
 
-            {isOutOfStock && (
+            {!hasInStock && (
               <Badge variant="destructive" className="absolute top-4 right-4">
                 Out of Stock
               </Badge>
-            )}
-
-            {hasDiscount && !isOutOfStock && (
-              <Badge className="absolute top-4 right-4 bg-red-500">Sale</Badge>
             )}
           </div>
 
@@ -251,88 +196,6 @@ export default function ProductDetailClient({ product }: { product: Product }) {
           {/* Title */}
           <h1 className="text-3xl md:text-4xl font-bold">{product.name}</h1>
 
-          {/* Price */}
-          <div className="flex items-baseline gap-3">
-            {displayData.price ? (
-              <>
-                <p className="text-3xl font-bold text-red-400">
-                  GH₵ {displayData.price.toFixed(2)}
-                </p>
-                {hasDiscount && displayData.compareAtPrice && (
-                  <p className="text-xl text-gray-500 line-through">
-                    GH₵ {displayData.compareAtPrice.toFixed(2)}
-                  </p>
-                )}
-              </>
-            ) : displayData.priceRange ? (
-              <p className="text-3xl font-bold">
-                GH₵ {displayData.priceRange.min.toFixed(2)} - GH₵{" "}
-                {displayData.priceRange.max.toFixed(2)}
-              </p>
-            ) : null}
-          </div>
-
-          {/* Variant Selectors */}
-          {product.hasVariants && attributeNames.length > 0 && (
-            <div className="space-y-4 py-4 border-y">
-              <h3 className="font-semibold">Select Options:</h3>
-              {attributeNames.map((attributeName) => (
-                <div key={attributeName} className="space-y-2">
-                  <Label htmlFor={attributeName}>{attributeName}</Label>
-                  <Select
-                    value={selectedAttributes[attributeName] || ""}
-                    onValueChange={(value) =>
-                      setSelectedAttributes({
-                        ...selectedAttributes,
-                        [attributeName]: value,
-                      })
-                    }
-                  >
-                    <SelectTrigger id={attributeName}>
-                      <SelectValue
-                        placeholder={`Select ${attributeName.toLowerCase()}`}
-                      />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {getAttributeOptions(attributeName).map((option) => (
-                        <SelectItem key={option} value={option}>
-                          {option}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              ))}
-
-              {selectedVariant && (
-                <p className="text-sm text-gray-600">
-                  {displayData.stock > 0
-                    ? `${displayData.stock} in stock`
-                    : "Out of stock"}
-                </p>
-              )}
-            </div>
-          )}
-
-          {product.hasVariants && (
-            <div className="text-sm text-gray-600">
-              {(() => {
-                const inStockCount = product.variants.filter(
-                  (v) => v.stock > 0,
-                ).length;
-                const totalCount = product.variants.length;
-
-                if (inStockCount === 0) {
-                  return "**All variants currently out of stock";
-                } else if (inStockCount === totalCount) {
-                  return `*All ${totalCount} variants available`;
-                } else {
-                  return `${inStockCount} of ${totalCount} variants available`;
-                }
-              })()}
-            </div>
-          )}
-
           {/* Description */}
           {product.description && (
             <div className="prose prose-sm max-w-none">
@@ -340,55 +203,158 @@ export default function ProductDetailClient({ product }: { product: Product }) {
             </div>
           )}
 
-          {/* Quantity & Add to Cart */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-4">
-              <Label>Quantity:</Label>
-              <div className="flex items-center border rounded-lg">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                  disabled={isOutOfStock}
-                >
-                  -
-                </Button>
-                <span className="px-4 py-2 min-w-12 text-center">
-                  {quantity}
+          {/* Variants Section */}
+          {product.hasVariants && product.variants.length > 0 && (
+            <div className="space-y-4 py-4 border-y">
+              <h3 className="font-semibold text-lg">
+                Select Variants (Multi-Select):
+              </h3>
+
+              {/* Variants List */}
+              <div className="space-y-3 max-h-96 overflow-y-auto border rounded-lg p-4 bg-gray-50">
+                {product.variants.map((variant) => {
+                  const isSelected = selectedVariants.has(variant.id);
+                  const quantity = selectedVariants.get(variant.id) || 0;
+                  const hasDiscount =
+                    variant.compareAtPrice &&
+                    variant.compareAtPrice > variant.price;
+
+                  return (
+                    <div
+                      key={variant.id}
+                      className={`flex items-center gap-3 p-3 border rounded-lg transition-colors ${
+                        isSelected
+                          ? "bg-white border-[#FF8C00]"
+                          : "bg-white border-gray-200 hover:border-gray-300"
+                      }`}
+                    >
+                      {/* Checkbox */}
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleVariant(variant.id)}
+                        className="w-5 h-5 rounded cursor-pointer accent-[#FF8C00]"
+                        aria-label={`Select ${variant.name}`}
+                      />
+
+                      {/* Variant Info */}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-gray-900">
+                          {variant.name}
+                        </p>
+                        <div className="flex items-center gap-2 text-sm">
+                          <span className="font-bold text-red-400">
+                            GH₵ {variant.price.toFixed(2)}
+                          </span>
+                          {hasDiscount && variant.compareAtPrice && (
+                            <span className="text-gray-500 line-through">
+                              GH₵ {variant.compareAtPrice.toFixed(2)}
+                            </span>
+                          )}
+                          <span
+                            className={`text-xs ${
+                              variant.stock > 0
+                                ? "text-green-600"
+                                : "text-red-600"
+                            }`}
+                          >
+                            {variant.stock > 0
+                              ? `${variant.stock} in stock`
+                              : "Out of stock"}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Quantity Control */}
+                      {isSelected && variant.stock > 0 && (
+                        <div className="flex items-center border rounded-lg bg-white">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() =>
+                              updateVariantQuantity(
+                                variant.id,
+                                Math.max(0, quantity - 1),
+                              )
+                            }
+                            className="h-8 w-8 p-0 hover:bg-gray-100"
+                          >
+                            <Minus className="h-3 w-3" />
+                          </Button>
+                          <span className="px-3 py-1 min-w-8 text-center text-sm font-medium">
+                            {quantity}
+                          </span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() =>
+                              updateVariantQuantity(variant.id, quantity + 1)
+                            }
+                            disabled={quantity >= variant.stock}
+                            className="h-8 w-8 p-0 hover:bg-gray-100 disabled:opacity-50"
+                          >
+                            <Plus className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              <p className="text-sm text-gray-600">
+                {product.variants.filter((v) => v.stock > 0).length} of{" "}
+                {product.variants.length} variants available
+              </p>
+            </div>
+          )}
+
+          {/* Selected Bundle Preview */}
+          {selectedVariantDetails.length > 0 && (
+            <div className="space-y-3 p-4 border rounded-lg bg-blue-50">
+              <h4 className="font-semibold text-gray-900">Selected Bundle:</h4>
+
+              {/* Item List */}
+              <div className="space-y-2">
+                {selectedVariantDetails.map(({ variant, quantity }) => (
+                  <div
+                    key={variant.id}
+                    className="flex justify-between items-center text-sm"
+                  >
+                    <span className="text-gray-700">
+                      {variant.name} x{quantity}
+                    </span>
+                    <span className="font-medium">
+                      GH₵ {(variant.price * quantity).toFixed(2)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Total */}
+              <div className="border-t pt-3 flex justify-between items-center">
+                <span className="font-semibold text-gray-900">
+                  Bundle Total:
                 </span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setQuantity(quantity + 1)}
-                  disabled={isOutOfStock || quantity >= displayData.stock}
-                >
-                  +
-                </Button>
+                <span className="text-xl font-bold text-[#FF8C00]">
+                  GH₵ {bundleTotal.toFixed(2)}
+                </span>
               </div>
             </div>
-
-            <div className="flex gap-3">
-              <Button
-                size="lg"
-                className="flex-1"
-                onClick={handleAddToCart}
-                disabled={
-                  isOutOfStock || (product.hasVariants && !selectedVariant)
-                }
-              >
-                <ShoppingCart className="mr-2 h-5 w-5" />
-                {isOutOfStock ? "Out of Stock" : "Add to Cart"}
-              </Button>
-              {/* <Button size="lg" variant="outline">
-                <Heart className="h-5 w-5" />
-              </Button> */}
-            </div>
-          </div>
-
-          {/* SKU */}
-          {displayData.sku && (
-            <p className="text-sm text-gray-500">SKU: {displayData.sku}</p>
           )}
+
+          {/* Add to Cart Button */}
+          <Button
+            size="lg"
+            className="w-full bg-[#FF8C00] hover:bg-[#E67E00] text-white rounded-none"
+            onClick={handleAddBundleToCart}
+            disabled={selectedVariants.size === 0 || !hasInStock}
+          >
+            <ShoppingCart className="mr-2 h-5 w-5" />
+            {selectedVariants.size === 0
+              ? "Select Variants to Add Bundle"
+              : `Add Bundle (${selectedVariants.size}) to Cart`}
+          </Button>
         </div>
       </div>
     </div>
