@@ -57,6 +57,9 @@ type ProductFormProps = {
     isActive: boolean;
     isFeatured: boolean;
     hasVariants: boolean;
+    isSaleActive?: boolean;
+    saleStartDate?: string | Date | null;
+    saleEndDate?: string | Date | null;
     variants?: Array<{
       id: string;
       name: string;
@@ -78,6 +81,13 @@ export default function ProductForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [categories, setCategories] = useState(initialCategories);
 
+  // Helper function to format date for datetime-local input
+  const formatDateForInput = (date: string | Date | null | undefined) => {
+    if (!date) return "";
+    const d = new Date(date);
+    return d.toISOString().slice(0, 16);
+  };
+
   const [formData, setFormData] = useState({
     name: initialData?.name || "",
     slug: initialData?.slug || "",
@@ -90,6 +100,9 @@ export default function ProductForm({
     categoryId: initialData?.categoryId || "",
     isActive: initialData?.isActive ?? true,
     isFeatured: initialData?.isFeatured ?? false,
+    isSaleActive: initialData?.isSaleActive ?? false,
+    saleStartDate: formatDateForInput(initialData?.saleStartDate),
+    saleEndDate: formatDateForInput(initialData?.saleEndDate),
   });
 
   const [images, setImages] = useState<string[]>(initialData?.images || []);
@@ -159,6 +172,22 @@ export default function ProductForm({
       }
     }
 
+    // Validate sale dates if sale is active
+    if (formData.isSaleActive) {
+      if (!formData.saleStartDate) {
+        toast.error("Please set a sale start date");
+        return;
+      }
+
+      if (
+        formData.saleEndDate &&
+        new Date(formData.saleEndDate) <= new Date(formData.saleStartDate)
+      ) {
+        toast.error("Sale end date must be after start date");
+        return;
+      }
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -171,6 +200,12 @@ export default function ProductForm({
         ...formData,
         images: images,
         hasVariants: productType === "variant",
+        saleStartDate: formData.saleStartDate
+          ? new Date(formData.saleStartDate).toISOString()
+          : null,
+        saleEndDate: formData.saleEndDate
+          ? new Date(formData.saleEndDate).toISOString()
+          : null,
         variants:
           productType === "variant"
             ? variants.map((v) => ({
@@ -197,6 +232,7 @@ export default function ProductForm({
       });
 
       if (response.ok) {
+        toast.success("Product successfully saved!");
         router.push("/admin/products");
         router.refresh();
       } else {
@@ -205,11 +241,10 @@ export default function ProductForm({
       }
     } catch (error) {
       console.error("Error saving product:", error);
-      alert(error instanceof Error ? error.message : "Failed to save product");
+      toast.error(error instanceof Error ? error.message : "Failed to save product");
     } finally {
       setIsSubmitting(false);
     }
-    toast.success("Product succesfully added!")
   };
 
   return (
@@ -486,6 +521,74 @@ export default function ProductForm({
             onChange={setVariants}
           />
         )}
+
+        {/* ✅ SALE CONFIGURATION */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Sale Configuration</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="isSaleActive"
+                checked={formData.isSaleActive}
+                onCheckedChange={(checked) =>
+                  setFormData({
+                    ...formData,
+                    isSaleActive: checked as boolean,
+                  })
+                }
+              />
+              <Label
+                htmlFor="isSaleActive"
+                className="font-normal cursor-pointer"
+              >
+                Enable Sale (customers can view but not purchase until start date)
+              </Label>
+            </div>
+
+            {formData.isSaleActive && (
+              <div className="space-y-4 p-4 border rounded-lg bg-orange-50">
+                <div className="space-y-1">
+                  <Label htmlFor="saleStartDate">Sale Start Date & Time *</Label>
+                  <Input
+                    id="saleStartDate"
+                    type="datetime-local"
+                    value={formData.saleStartDate}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        saleStartDate: e.target.value,
+                      })
+                    }
+                    required
+                  />
+                  <p className="text-sm text-gray-600 mt-1">
+                    Customers can add to cart starting from this date and time
+                  </p>
+                </div>
+
+                <div className="space-y-1">
+                  <Label htmlFor="saleEndDate">Sale End Date & Time (Optional)</Label>
+                  <Input
+                    id="saleEndDate"
+                    type="datetime-local"
+                    value={formData.saleEndDate}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        saleEndDate: e.target.value,
+                      })
+                    }
+                  />
+                  <p className="text-sm text-gray-600 mt-1">
+                    Sale will end on this date. Leave empty for indefinite sale.
+                  </p>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Status */}
         <Card>

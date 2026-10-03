@@ -28,6 +28,9 @@ type ProductInput = {
   isActive: boolean;
   isFeatured: boolean;
   hasVariants: boolean;
+  isSaleActive: boolean;          
+  saleStartDate: string | null;   
+  saleEndDate: string | null;     
   variants: VariantInput[];
 };
 
@@ -90,6 +93,9 @@ export async function PUT(
       isActive,
       isFeatured,
       hasVariants,
+      isSaleActive,        
+      saleStartDate,       
+      saleEndDate,         
       variants,
     } = body;
 
@@ -135,16 +141,19 @@ export async function PUT(
           name,
           slug,
           description: description || null,
-          price: 0, // Base price not used for variant products
+          price: 0,
           compareAtPrice: null,
           costPrice: null,
-          stock: 0, // Total stock calculated from variants
+          stock: 0,
           sku: sku?.trim() || null,
           categoryId: categoryId || null,
           images: images || [],
           isActive,
           isFeatured,
           hasVariants: true,
+          isSaleActive,                           
+          saleStartDate: saleStartDate ? new Date(saleStartDate) : null,  
+          saleEndDate: saleEndDate ? new Date(saleEndDate) : null,        
           variants: {
             create: variants.map((variant) => ({
               name: variant.name,
@@ -189,6 +198,9 @@ export async function PUT(
           isActive,
           isFeatured,
           hasVariants: false,
+          isSaleActive,                           
+          saleStartDate: saleStartDate ? new Date(saleStartDate) : null,  
+          saleEndDate: saleEndDate ? new Date(saleEndDate) : null,        
         },
         include: {
           category: true,
@@ -219,7 +231,6 @@ export async function DELETE(
 
     const { id } = await params;
 
-    // Check if product exists
     const product = await prisma.product.findUnique({
       where: { id },
     });
@@ -231,7 +242,6 @@ export async function DELETE(
       );
     }
 
-    // Delete product (variants will be cascade deleted)
     await prisma.product.delete({
       where: { id },
     });

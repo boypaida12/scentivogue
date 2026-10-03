@@ -33,6 +33,9 @@ export type TransformedProduct = {
   isActive: boolean;
   isFeatured: boolean;
   hasVariants: boolean;
+  isSaleActive: boolean;              
+  saleStartDate: Date | null;         
+  saleEndDate: Date | null;           
   createdAt: Date;
   updatedAt: Date;
   category: {
@@ -70,6 +73,9 @@ export function transformProductWithVariants(
     hasVariants: product.hasVariants,
     createdAt: product.createdAt,
     updatedAt: product.updatedAt,
+    isSaleActive: product.isSaleActive,
+    saleStartDate: product.saleStartDate,
+    saleEndDate: product.saleEndDate,
     category: product.category,
     variants: product.variants.map((v) => ({
       id: v.id,

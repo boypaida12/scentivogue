@@ -4,10 +4,10 @@ import { useState, useMemo } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Label } from "@/components/ui/label";
 import { ShoppingCart, Plus, Minus } from "lucide-react";
 import { useCart } from "@/lib/cart-context";
 import { toast } from "sonner";
+import { format } from "date-fns";
 
 type ProductVariant = {
   id: string;
@@ -29,6 +29,9 @@ type Product = {
   stock: number;
   images: string[];
   hasVariants: boolean;
+  isSaleActive: boolean;
+  saleStartDate: Date | null;
+  saleEndDate: Date | null;
   category: {
     id: string;
     name: string;
@@ -133,6 +136,37 @@ export default function ProductDetailClient({ product }: { product: Product }) {
     setSelectedVariants(new Map());
   };
 
+  // Check if sale is live
+  const isSaleLive = useMemo(() => {
+    if (!product.isSaleActive) return false;
+
+    const now = new Date();
+    const saleStarted =
+      !product.saleStartDate || new Date(product.saleStartDate) <= now;
+    const saleEnded =
+      product.saleEndDate && new Date(product.saleEndDate) < now;
+
+    return saleStarted && !saleEnded;
+  }, [product.isSaleActive, product.saleStartDate, product.saleEndDate]);
+
+  // Get days until sale
+  const daysUntilSale = useMemo(() => {
+    if (isSaleLive) return 0;
+    if (!product.saleStartDate) return null;
+
+    const now = new Date();
+    const start = new Date(product.saleStartDate);
+    const days = Math.ceil(
+      (start.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
+    );
+    return days > 0 ? days : 0;
+  }, [isSaleLive, product.saleStartDate]);
+
+  // Get formatted sale date
+  const saleStartFormatted = product.saleStartDate
+    ? format(new Date(product.saleStartDate), "PPP p")
+    : null;
+
   return (
     <div className="py-8">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 container px-4 mx-auto">
@@ -195,6 +229,29 @@ export default function ProductDetailClient({ product }: { product: Product }) {
 
           {/* Title */}
           <h1 className="text-3xl md:text-4xl font-bold">{product.name}</h1>
+
+          {/* ✅ SALE STATUS BANNER */}
+          {product.isSaleActive && !isSaleLive && daysUntilSale !== null && (
+            <div className="p-4 border-2 border-[#FF8C00] rounded-lg bg-orange-50">
+              <p className="font-semibold text-[#FF8C00]">
+                🔄 Sale Coming Soon!
+              </p>
+              <p className="text-sm text-gray-700 mt-1">
+                {daysUntilSale === 0
+                  ? "Sale starts today!"
+                  : daysUntilSale === 1
+                    ? "Sale starts tomorrow!"
+                    : `Sale starts in ${daysUntilSale} days`}
+              </p>
+              <p className="text-xs text-gray-600 mt-2">{saleStartFormatted}</p>
+            </div>
+          )}
+
+          {product.isSaleActive && isSaleLive && (
+            <div className="p-4 border-2 border-red-500 rounded-lg bg-red-50">
+              <p className="font-semibold text-red-600">🎉 SALE IS LIVE!</p>
+            </div>
+          )}
 
           {/* Description */}
           {product.description && (
@@ -348,10 +405,16 @@ export default function ProductDetailClient({ product }: { product: Product }) {
             size="lg"
             className="w-full bg-[#FF8C00] hover:bg-[#E67E00] text-white rounded-none"
             onClick={handleAddBundleToCart}
-            disabled={selectedVariants.size === 0 || !hasInStock}
+            disabled={
+              selectedVariants.size === 0 ||
+              !hasInStock ||
+              (product.isSaleActive && !isSaleLive)
+            }
           >
             <ShoppingCart className="mr-2 h-5 w-5" />
-            {selectedVariants.size === 0
+            {product.isSaleActive && !isSaleLive
+              ? `Sale Starts ${daysUntilSale === 1 ? "Tomorrow" : `in ${daysUntilSale} days`}`
+              : selectedVariants.size === 0
               ? "Select Variants to Add Bundle"
               : `Add Bundle (${selectedVariants.size}) to Cart`}
           </Button>
