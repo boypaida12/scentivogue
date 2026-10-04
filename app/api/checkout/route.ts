@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+// ✅ UPDATED: Include bundleItemsSelected
 type OrderItem = {
   productId: string;
+  variantId?: string | null;
+  bundleItemsSelected?: string[]; // ✅ ADD THIS
   quantity: number;
   price: number;
 };
@@ -74,7 +77,12 @@ export async function POST(request: Request) {
         notes: notes || null,
         items: {
           create: items.map((item: OrderItem) => ({
-            productId: item.productId,
+            productId: item.variantId ? null : item.productId,
+            variantId: item.variantId || null,
+            // ✅ ADD THIS: Save bundle items as JSON string
+            bundleItemsSelected: item.bundleItemsSelected
+              ? JSON.stringify(item.bundleItemsSelected)
+              : null,
             quantity: item.quantity,
             price: item.price,
           })),
@@ -84,21 +92,47 @@ export async function POST(request: Request) {
         items: {
           include: {
             product: true,
+            variant: true,
           },
         },
       },
     });
 
-    // Update product stock
+    // ✅ UPDATED: Handle stock reduction for both products/variants and bundles
     for (const item of items) {
-      await prisma.product.update({
-        where: { id: item.productId },
-        data: {
-          stock: {
-            decrement: item.quantity,
+      if (item.bundleItemsSelected && item.bundleItemsSelected.length > 0) {
+        // For bundles: reduce stock of selected bundle items
+        for (const bundleItemId of item.bundleItemsSelected) {
+          await prisma.bundleItem.update({
+            where: { id: bundleItemId },
+            data: {
+              stock: {
+                decrement: item.quantity,
+              },
+            },
+          });
+        }
+      } else if (item.variantId) {
+        // For variants: reduce variant stock
+        await prisma.productVariant.update({
+          where: { id: item.variantId },
+          data: {
+            stock: {
+              decrement: item.quantity,
+            },
           },
-        },
-      });
+        });
+      } else {
+        // For simple products: reduce product stock
+        await prisma.product.update({
+          where: { id: item.productId },
+          data: {
+            stock: {
+              decrement: item.quantity,
+            },
+          },
+        });
+      }
     }
 
     return NextResponse.json({ order }, { status: 201 });

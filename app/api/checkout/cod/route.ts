@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+// ✅ UPDATED: Include bundleItemsSelected
 type CODItem = {
   productId: string;
   variantId?: string | null;
+  bundleItemsSelected?: string[]; // ✅ ADD THIS
   quantity: number;
   price: number;
   name: string;
@@ -95,8 +97,12 @@ export async function POST(request: Request) {
         items: {
           create: items.map((item) => {
             const orderItemData = {
-              productId: item.variantId ? null : item.productId,  // ✅ null if variant
-              variantId: item.variantId || null,                  // ✅ Save variantId
+              productId: item.variantId ? null : item.productId,
+              variantId: item.variantId || null,
+              // ✅ ADD THIS: Save bundle items as JSON string
+              bundleItemsSelected: item.bundleItemsSelected
+                ? JSON.stringify(item.bundleItemsSelected)
+                : null,
               quantity: parseInt(String(item.quantity)),
               price: parseFloat(String(item.price)),
             };
@@ -116,10 +122,25 @@ export async function POST(request: Request) {
       },
     });
 
-    // Reduce product stock
+    // ✅ UPDATED: Handle stock reduction for bundles, variants, and simple products
     for (const item of items) {
-      if (item.variantId) {
-        // Reduce variant stock
+      if (item.bundleItemsSelected && item.bundleItemsSelected.length > 0) {
+        // For bundles: reduce stock of selected bundle items
+        for (const bundleItemId of item.bundleItemsSelected) {
+          await prisma.bundleItem.update({
+            where: { id: bundleItemId },
+            data: {
+              stock: {
+                decrement: item.quantity,
+              },
+            },
+          });
+        }
+        console.log(
+          `  ✅ Reduced stock for ${item.bundleItemsSelected.length} bundle items by ${item.quantity}`
+        );
+      } else if (item.variantId) {
+        // For variants: reduce variant stock
         await prisma.productVariant.update({
           where: { id: item.variantId },
           data: {
@@ -128,9 +149,11 @@ export async function POST(request: Request) {
             },
           },
         });
-        console.log(`  ✅ Reduced variant ${item.variantId} stock by ${item.quantity}`);
+        console.log(
+          `  ✅ Reduced variant ${item.variantId} stock by ${item.quantity}`
+        );
       } else {
-        // Reduce product stock (simple products only)
+        // For simple products: reduce product stock
         await prisma.product.update({
           where: { id: item.productId },
           data: {
@@ -139,14 +162,19 @@ export async function POST(request: Request) {
             },
           },
         });
-        console.log(`  ✅ Reduced product ${item.productId} stock by ${item.quantity}`);
+        console.log(
+          `  ✅ Reduced product ${item.productId} stock by ${item.quantity}`
+        );
       }
     }
 
-    return NextResponse.json({
-      orderNumber: order.orderNumber,
-      orderId: order.id,
-    }, { status: 201 });
+    return NextResponse.json(
+      {
+        orderNumber: order.orderNumber,
+        orderId: order.id,
+      },
+      { status: 201 }
+    );
   } catch (error) {
     console.error("COD checkout error:", error);
     return NextResponse.json(

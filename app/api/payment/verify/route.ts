@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+// ✅ UPDATED: Include bundleItemsSelected
 type WebhookItem = {
   productId: string;
   variantId?: string | null;
+  bundleItemsSelected?: string[]; // ✅ ADD THIS
   quantity: number;
   price: number;
   name: string;
@@ -84,7 +86,7 @@ export async function GET(request: Request) {
     // Generate order number
     const orderNumber = `ORD-${Date.now()}`;
 
-    // Create order with variant support
+    // Create order with bundle support
     const newOrder = await prisma.order.create({
       data: {
         orderNumber,
@@ -106,8 +108,12 @@ export async function GET(request: Request) {
         notes: notes || null,
         items: {
           create: (items as WebhookItem[]).map((item) => ({
-            productId: item.variantId ? null : item.productId,  // ✅ null if variant
-            variantId: item.variantId || null,                  // ✅ Save variantId
+            productId: item.variantId ? null : item.productId,
+            variantId: item.variantId || null,
+            // ✅ ADD THIS: Save bundle items as JSON string
+            bundleItemsSelected: item.bundleItemsSelected
+              ? JSON.stringify(item.bundleItemsSelected)
+              : null,
             quantity: parseInt(String(item.quantity)),
             price: parseFloat(String(item.price)),
           })),
@@ -117,16 +123,28 @@ export async function GET(request: Request) {
         items: {
           include: {
             product: true,
-            variant: true,  // ✅ Include variant
+            variant: true,
           },
         },
       },
     });
 
-    // Reduce stock (handle both products and variants)
+    // ✅ UPDATED: Handle stock reduction for bundles, variants, and simple products
     for (const item of items as WebhookItem[]) {
-      if (item.variantId) {
-        // Reduce variant stock
+      if (item.bundleItemsSelected && item.bundleItemsSelected.length > 0) {
+        // For bundles: reduce stock of selected bundle items
+        for (const bundleItemId of item.bundleItemsSelected) {
+          await prisma.bundleItem.update({
+            where: { id: bundleItemId },
+            data: {
+              stock: {
+                decrement: parseInt(String(item.quantity)),
+              },
+            },
+          });
+        }
+      } else if (item.variantId) {
+        // For variants: reduce variant stock
         await prisma.productVariant.update({
           where: { id: item.variantId },
           data: {
@@ -136,7 +154,7 @@ export async function GET(request: Request) {
           },
         });
       } else {
-        // Reduce product stock
+        // For simple products: reduce product stock
         await prisma.product.update({
           where: { id: item.productId },
           data: {
