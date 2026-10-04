@@ -31,13 +31,18 @@ export default async function OrderDetailPage({
 
   const { id } = await params;
 
+  // ✅ UPDATED: Include bundleItems in product query
   const order = await prisma.order.findUnique({
     where: { id },
     include: {
       customer: true,
       items: {
         include: {
-          product: true,
+          product: {
+            include: {
+              bundleItems: true, // ✅ ADD THIS
+            },
+          },
           variant: {
             include: {
               product: true,
@@ -133,14 +138,42 @@ export default async function OrderDetailPage({
                   </TableHeader>
                   <TableBody>
                     {order.items.map((item) => {
+                      const isBundleOrder =
+                        item.bundleItemsSelected &&
+                        item.bundleItemsSelected.length > 0;
+                      const bundleItemIds: string[] = isBundleOrder
+                        ? JSON.parse(item.bundleItemsSelected as string)
+                        : [];
+
                       // Get product (either directly or through variant)
                       const product = item.product || item.variant?.product;
                       const variant = item.variant;
+
+                      const selectedBundleItems =
+                        product &&
+                        "bundleItems" in product &&
+                        Array.isArray(product.bundleItems)
+                          ? (
+                              product.bundleItems as Array<{
+                                id: string;
+                                name: string;
+                                sku: string | null;
+                              }>
+                            ).filter(
+                              (bi: {
+                                id: string;
+                                name: string;
+                                sku: string | null;
+                              }) => bundleItemIds.includes(bi.id),
+                            )
+                          : [];
 
                       let displayName = "Unknown Product";
 
                       if (variant && product) {
                         displayName = `${product.name} (${variant.name})`;
+                      } else if (isBundleOrder && product) {
+                        displayName = `${product.name} (Bundle)`;
                       } else if (product) {
                         displayName = product.name;
                       } else if (variant) {
@@ -148,20 +181,60 @@ export default async function OrderDetailPage({
                       }
 
                       return (
-                        <TableRow key={item.id}>
-                          <TableCell className="font-medium">
-                            {displayName}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            GH₵ {item.price.toFixed(2)}
-                          </TableCell>
-                          <TableCell className="text-center">
-                            {item.quantity}
-                          </TableCell>
-                          <TableCell className="text-right font-medium">
-                            GH₵ {(item.price * item.quantity).toFixed(2)}
-                          </TableCell>
-                        </TableRow>
+                        <TableBody key={item.id}>
+                          {/* Main row */}
+                          <TableRow>
+                            <TableCell className="font-medium">
+                              {displayName}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              GH₵ {item.price.toFixed(2)}
+                            </TableCell>
+                            <TableCell className="text-center">
+                              {item.quantity}
+                            </TableCell>
+                            <TableCell className="text-right font-medium">
+                              GH₵ {(item.price * item.quantity).toFixed(2)}
+                            </TableCell>
+                          </TableRow>
+
+                          {/* ✅ NEW: Bundle items detail rows */}
+                          {isBundleOrder && selectedBundleItems.length > 0 && (
+                            <TableRow className="bg-blue-50 hover:bg-blue-50">
+                              <TableCell colSpan={4}>
+                                <div className="ml-4 py-2 space-y-1">
+                                  <p className="text-sm font-semibold text-blue-900">
+                                    Bundle Items Selected:
+                                  </p>
+                                  <div className="space-y-1">
+                                    {selectedBundleItems.map(
+                                      (bundleItem: {
+                                        id: string;
+                                        name: string;
+                                        sku: string | null;
+                                      }) => (
+                                        <div
+                                          key={bundleItem.id}
+                                          className="text-sm text-blue-800 ml-2"
+                                        >
+                                          <span className="inline-block mr-2">
+                                            •
+                                          </span>
+                                          {bundleItem.name}
+                                          {bundleItem.sku && (
+                                            <span className="text-xs text-blue-600 ml-2">
+                                              (SKU: {bundleItem.sku})
+                                            </span>
+                                          )}
+                                        </div>
+                                      ),
+                                    )}
+                                  </div>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </TableBody>
                       );
                     })}
                   </TableBody>
@@ -172,10 +245,6 @@ export default async function OrderDetailPage({
                     <span className="text-gray-600">Subtotal</span>
                     <span>GH₵ {order.subtotal.toFixed(2)}</span>
                   </div>
-                  {/* <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Shipping</span>
-                    <span>GH₵ {order.shippingCost.toFixed(2)}</span>
-                  </div> */}
                   <div className="flex justify-between text-lg font-bold border-t pt-2">
                     <span>Total</span>
                     <span>GH₵ {order.total.toFixed(2)}</span>

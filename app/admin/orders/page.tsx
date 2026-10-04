@@ -17,7 +17,11 @@ export default async function OrdersPage() {
       customer: true,
       items: {
         include: {
-          product: true,
+          product: {
+            include: {
+              bundleItems: true, 
+            },
+          },
            variant: { 
             include: {
               product: true,
