@@ -21,12 +21,21 @@ import { Plus, ExternalLink } from "lucide-react";
 import CreateCategoryDialog from "./create-category-dialog";
 import ImageUpload from "./image-upload";
 import ProductVariantManager from "./product-variants-manager";
+import BundleItemsManager from "./bundle-items-manager";
 import { toast } from "sonner";
 
 type Category = {
   id: string;
   name: string;
   slug: string;
+};
+
+type BundleItem = {
+  id?: string;
+  name: string;
+  sku: string;
+  stock: string;
+  attributes: Record<string, string>;
 };
 
 type ProductVariant = {
@@ -70,6 +79,18 @@ type ProductFormProps = {
       stock: number;
       sku: string | null;
     }>;
+    productType?: string;
+    bundleItemsPerSet?: number | null;
+    bundlePrice?: number | null;
+    bundleItems?: Array<{
+      id: string;
+      name: string;
+      sku: string | null;
+      stock: number;
+      attributes: Record<string, string>;
+    }>;
+    bundleCompareAtPrice?: number | null; 
+    bundleCostPrice?: number | null; 
   };
 };
 
@@ -103,11 +124,21 @@ export default function ProductForm({
     isSaleActive: initialData?.isSaleActive ?? false,
     saleStartDate: formatDateForInput(initialData?.saleStartDate),
     saleEndDate: formatDateForInput(initialData?.saleEndDate),
+    bundleItemsPerSet: initialData?.bundleItemsPerSet?.toString() || "",
+    bundlePrice: initialData?.bundlePrice?.toString() || "",
+    bundleCompareAtPrice: initialData?.bundleCompareAtPrice?.toString() || "", 
+    bundleCostPrice: initialData?.bundleCostPrice?.toString() || "", 
   });
 
   const [images, setImages] = useState<string[]>(initialData?.images || []);
-  const [productType, setProductType] = useState<"simple" | "variant">(
-    initialData?.hasVariants ? "variant" : "simple",
+  const [productType, setProductType] = useState<
+    "simple" | "variant" | "bundle"
+  >(
+    initialData?.productType === "bundle"
+      ? "bundle"
+      : initialData?.hasVariants
+        ? "variant"
+        : "simple",
   );
   const [variants, setVariants] = useState<ProductVariant[]>(
     initialData?.variants?.map((v) => ({
@@ -119,6 +150,16 @@ export default function ProductForm({
       costPrice: v.costPrice?.toString() || "",
       stock: v.stock.toString(),
       sku: v.sku || "",
+    })) || [],
+  );
+
+  const [bundleItems, setBundleItems] = useState<BundleItem[]>(
+    initialData?.bundleItems?.map((item) => ({
+      id: item.id,
+      name: item.name,
+      sku: item.sku || "",
+      stock: item.stock.toString(),
+      attributes: item.attributes || {},
     })) || [],
   );
 
@@ -172,6 +213,34 @@ export default function ProductForm({
       }
     }
 
+    // Validate bundles
+    if (productType === "bundle") {
+      if (bundleItems.length === 0) {
+        toast.error("Please add at least one item to the bundle");
+        return;
+      }
+
+      if (
+        !formData.bundleItemsPerSet ||
+        parseInt(formData.bundleItemsPerSet) <= 0
+      ) {
+        toast.error("Please specify how many items per set");
+        return;
+      }
+
+      if (parseInt(formData.bundleItemsPerSet) > bundleItems.length) {
+        toast.error(
+          `Cannot require ${formData.bundleItemsPerSet} items when bundle only has ${bundleItems.length} items`,
+        );
+        return;
+      }
+
+      if (!formData.bundlePrice || parseFloat(formData.bundlePrice) <= 0) {
+        toast.error("Please enter a valid bundle price");
+        return;
+      }
+    }
+
     // Validate sale dates if sale is active
     if (formData.isSaleActive) {
       if (!formData.saleStartDate) {
@@ -199,6 +268,7 @@ export default function ProductForm({
       const payload = {
         ...formData,
         images: images,
+        productType,
         hasVariants: productType === "variant",
         saleStartDate: formData.saleStartDate
           ? new Date(formData.saleStartDate).toISOString()
@@ -221,6 +291,22 @@ export default function ProductForm({
                 sku: v.sku || null,
               }))
             : [],
+        bundleItemsPerSet:
+          productType === "bundle"
+            ? parseInt(formData.bundleItemsPerSet)
+            : null,
+        bundlePrice:
+          productType === "bundle" ? parseFloat(formData.bundlePrice) : null,
+        bundleItems:
+          productType === "bundle"
+            ? bundleItems.map((item) => ({
+                id: item.id,
+                name: item.name,
+                sku: item.sku || null,
+                stock: parseInt(item.stock),
+                attributes: item.attributes,
+              }))
+            : [],
       };
 
       const response = await fetch(url, {
@@ -241,7 +327,9 @@ export default function ProductForm({
       }
     } catch (error) {
       console.error("Error saving product:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to save product");
+      toast.error(
+        error instanceof Error ? error.message : "Failed to save product",
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -381,7 +469,7 @@ export default function ProductForm({
           <CardContent>
             <RadioGroup
               value={productType}
-              onValueChange={(value: "simple" | "variant") =>
+              onValueChange={(value: "simple" | "variant" | "bundle") =>
                 setProductType(value)
               }
             >
@@ -395,6 +483,14 @@ export default function ProductForm({
                 <RadioGroupItem value="variant" id="variant" />
                 <Label htmlFor="variant" className="font-normal cursor-pointer">
                   Product with Variants - Multiple sizes, colors, etc.
+                </Label>
+              </div>
+              {/* ✅ NEW: Bundle option */}
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="bundle" id="bundle" />
+                <Label htmlFor="bundle" className="font-normal cursor-pointer">
+                  Product Bundle - Select any X items from a collection for
+                  fixed price
                 </Label>
               </div>
             </RadioGroup>
@@ -522,6 +618,113 @@ export default function ProductForm({
           />
         )}
 
+        {/* ✅ NEW: Bundle Product Configuration */}
+        {productType === "bundle" && (
+          <>
+            <Card>
+              <CardHeader>
+                <CardTitle>Bundle Configuration</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-1">
+                    <Label htmlFor="bundleItemsPerSet">
+                      Items Per Set (How many to select) *
+                    </Label>
+                    <Input
+                      id="bundleItemsPerSet"
+                      type="number"
+                      min="1"
+                      value={formData.bundleItemsPerSet}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          bundleItemsPerSet: e.target.value,
+                        })
+                      }
+                      placeholder="5"
+                      required
+                    />
+                    <p className="text-sm text-gray-600 mt-1">
+                      Customer must select exactly this many items
+                    </p>
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label htmlFor="bundlePrice">Bundle Price (GH₵) *</Label>
+                    <Input
+                      id="bundlePrice"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={formData.bundlePrice}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          bundlePrice: e.target.value,
+                        })
+                      }
+                      placeholder="100.00"
+                      required
+                    />
+                    <p className="text-sm text-gray-600 mt-1">
+                      Price for one complete set
+                    </p>
+                  </div>
+
+                  {/* ✅ NEW: Compare At Price */}
+                  <div className="space-y-1">
+                    <Label htmlFor="bundleCompareAtPrice">
+                      Compare At Price (GH₵)
+                    </Label>
+                    <Input
+                      id="bundleCompareAtPrice"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={formData.bundleCompareAtPrice || ""}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          bundleCompareAtPrice: e.target.value,
+                        })
+                      }
+                      placeholder="150.00"
+                    />
+                    <p className="text-sm text-gray-600 mt-1">
+                      Original price (for showing discounts)
+                    </p>
+                  </div>
+                </div>
+
+                {/* ✅ NEW: Cost Price */}
+                <div className="space-y-1">
+                  <Label htmlFor="bundleCostPrice">Cost Price (GH₵)</Label>
+                  <Input
+                    id="bundleCostPrice"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formData.bundleCostPrice || ""}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        bundleCostPrice: e.target.value,
+                      })
+                    }
+                    placeholder="80.00"
+                  />
+                  <p className="text-sm text-gray-600 mt-1">
+                    Your cost (for profit tracking)
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <BundleItemsManager items={bundleItems} onChange={setBundleItems} />
+          </>
+        )}
+
         {/* ✅ SALE CONFIGURATION */}
         <Card>
           <CardHeader>
@@ -543,14 +746,17 @@ export default function ProductForm({
                 htmlFor="isSaleActive"
                 className="font-normal cursor-pointer"
               >
-                Enable Sale (customers can view but not purchase until start date)
+                Enable Sale (customers can view but not purchase until start
+                date)
               </Label>
             </div>
 
             {formData.isSaleActive && (
               <div className="space-y-4 p-4 border rounded-lg bg-orange-50">
                 <div className="space-y-1">
-                  <Label htmlFor="saleStartDate">Sale Start Date & Time *</Label>
+                  <Label htmlFor="saleStartDate">
+                    Sale Start Date & Time *
+                  </Label>
                   <Input
                     id="saleStartDate"
                     type="datetime-local"
@@ -569,7 +775,9 @@ export default function ProductForm({
                 </div>
 
                 <div className="space-y-1">
-                  <Label htmlFor="saleEndDate">Sale End Date & Time (Optional)</Label>
+                  <Label htmlFor="saleEndDate">
+                    Sale End Date & Time (Optional)
+                  </Label>
                   <Input
                     id="saleEndDate"
                     type="datetime-local"

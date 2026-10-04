@@ -12,6 +12,15 @@ type Product = {
   stock: number;
   images: string[];
   hasVariants: boolean;
+  // ✅ NEW: Bundle fields
+  productType?: string;
+  bundlePrice?: number | null;
+  bundleCompareAtPrice?: number | null;
+  bundleItems?: Array<{
+    id: string;
+    name: string;
+    stock: number;
+  }>;
   category?: {
     id: string;
     name: string;
@@ -26,14 +35,36 @@ type Product = {
 };
 
 export default function ProductCard({ product }: { product: Product }) {
-  // Helper function to get display data
+  // ✅ UPDATED: Helper function to get display data
   const getDisplayData = () => {
+    const isBundle = product.productType === "bundle";
+
+    // Bundle products
+    if (isBundle) {
+      const bundleItemStock = product.bundleItems?.reduce(
+        (sum, item) => sum + item.stock,
+        0
+      ) || 0;
+
+      const hasDiscount =
+        product.bundleCompareAtPrice &&
+        product.bundleCompareAtPrice > (product.bundlePrice || 0);
+
+      return {
+        price: product.bundlePrice,
+        priceRange: null,
+        stock: bundleItemStock,
+        hasDiscount,
+        type: "bundle",
+      };
+    }
+
+    // Variant products
     if (
       product.hasVariants &&
       product.variants &&
       product.variants.length > 0
     ) {
-      // For variant products, show price range and total stock
       const prices = product.variants.map((v) => v.price);
       const stocks = product.variants.map((v) => v.stock);
 
@@ -50,6 +81,7 @@ export default function ProductCard({ product }: { product: Product }) {
           minPrice !== maxPrice ? { min: minPrice, max: maxPrice } : null,
         stock: totalStock,
         hasDiscount,
+        type: "variant",
       };
     }
 
@@ -61,6 +93,7 @@ export default function ProductCard({ product }: { product: Product }) {
       hasDiscount: product.compareAtPrice
         ? product.compareAtPrice > product.price
         : false,
+      type: "simple",
     };
   };
 
@@ -94,10 +127,15 @@ export default function ProductCard({ product }: { product: Product }) {
           {displayData.hasDiscount && !isOutOfStock && (
             <Badge className="absolute top-2 right-2 bg-red-500">Sale</Badge>
           )}
+
+          {/* ✅ NEW: Bundle badge */}
+          {displayData.type === "bundle" && !isOutOfStock && (
+            <Badge className="absolute top-2 left-2 bg-blue-500">Bundle</Badge>
+          )}
         </div>
 
         <CardContent className="px-4">
-          <h3 className="font-semibold text-lg mb-2 line-clamp-2 group-hover:text-blue-600 transition-colors">
+          <h3 className="font-semibold mb-2 line-clamp-2 group-hover:text-blue-600 transition-colors">
             {product.name}
           </h3>
 
@@ -118,19 +156,33 @@ export default function ProductCard({ product }: { product: Product }) {
                 <p className="text-lg font-bold text-red-400">
                   GH₵ {displayData.price?.toFixed(2)}
                 </p>
-                {displayData.hasDiscount && product.compareAtPrice && (
-                  <p className="text-sm text-gray-500 line-through">
-                    GH₵ {product.compareAtPrice.toFixed(2)}
-                  </p>
-                )}
+                {displayData.hasDiscount &&
+                  (displayData.type === "bundle"
+                    ? product.bundleCompareAtPrice
+                    : product.compareAtPrice) && (
+                    <p className="text-sm text-gray-500 line-through">
+                      GH₵{" "}
+                      {displayData.type === "bundle"
+                        ? product.bundleCompareAtPrice?.toFixed(2)
+                        : product.compareAtPrice?.toFixed(2)}
+                    </p>
+                  )}
               </>
             )}
           </div>
 
-          {product.hasVariants &&
+          {/* ✅ NEW: Show bundle info */}
+          {displayData.type === "bundle" && product.bundleItems && (
+            <p className="text-sm text-gray-500 mt-2">
+              {product.bundleItems.length} items available
+            </p>
+          )}
+
+          {/* Variant options */}
+          {displayData.type === "variant" &&
             product.variants &&
             product.variants.length > 1 && (
-              <p className="text-sm text-gray-500 mt-2">
+              <p className="text-sm text-gray-500 my-2">
                 {product.variants.length} options available
               </p>
             )}

@@ -13,7 +13,13 @@ type VariantInput = {
   stock: number;
   sku: string | null;
 };
-
+type BundleItemInput = {
+  id?: string;
+  name: string;
+  sku: string | null;
+  stock: number;
+  attributes: Record<string, string>;
+};
 type ProductInput = {
   name: string;
   slug: string;
@@ -27,7 +33,16 @@ type ProductInput = {
   images: string[];
   isActive: boolean;
   isFeatured: boolean;
+  productType: "simple" | "variant" | "bundle";
   hasVariants: boolean;
+  isSaleActive: boolean;
+  saleStartDate: string | null;
+  saleEndDate: string | null;
+  bundleItemsPerSet?: number | null;
+  bundlePrice?: string | null;
+  bundleCompareAtPrice?: string | null;
+  bundleCostPrice?: string | null;
+  bundleItems?: BundleItemInput[];
   variants: VariantInput[];
 };
 
@@ -75,15 +90,24 @@ export async function POST(request: Request) {
       images,
       isActive,
       isFeatured,
+      productType,          
       hasVariants,
+      isSaleActive,
+      saleStartDate,
+      saleEndDate,
+      bundleItemsPerSet,    
+      bundlePrice,          
+      bundleCompareAtPrice, 
+      bundleCostPrice,      
+      bundleItems,          
       variants,
     } = body;
 
     console.log("========================================");
     console.log("📥 API RECEIVED:");
+    console.log("  productType:", productType);
     console.log("  hasVariants:", hasVariants);
     console.log("  variants count:", variants?.length);
-    console.log("  variants data:", JSON.stringify(variants, null, 2));
     console.log("========================================");
 
     // Validate required fields
@@ -106,32 +130,63 @@ export async function POST(request: Request) {
       );
     }
 
-    // Create product with or without variants
-    if (hasVariants && variants && variants.length > 0) {
-      console.log("✅ CREATING PRODUCT WITH VARIANTS");
-
-      const variantsToCreate = variants.map((variant, index) => {
-        const variantData = {
-          name: variant.name,
-          attributes: variant.attributes, 
-          price: variant.price,
-          compareAtPrice: variant.compareAtPrice || null,
-          costPrice: variant.costPrice || null,
-          stock: variant.stock,
-          sku: variant.sku?.trim() || null,
-        };
-
-        console.log(`  📦 Variant ${index + 1} to create:`, JSON.stringify(variantData, null, 2));
-        return variantData;
-      });
-
-      console.log("🔄 CALLING PRISMA CREATE...");
+    // ✅ NEW: Handle Bundle Products
+    if (productType === "bundle") {
+      console.log("✅ CREATING BUNDLE PRODUCT");
 
       const product = await prisma.product.create({
         data: {
           name,
           slug,
           description: description || null,
+          productType: "bundle",
+          bundleItemsPerSet,
+          bundlePrice: bundlePrice ? parseFloat(bundlePrice) : 0,
+          bundleCompareAtPrice: bundleCompareAtPrice ? parseFloat(bundleCompareAtPrice) : null,
+          bundleCostPrice: bundleCostPrice ? parseFloat(bundleCostPrice) : null,
+          // Set simple product fields to defaults
+          price: 0,
+          compareAtPrice: null,
+          costPrice: null,
+          stock: 0,
+          sku: null,
+          categoryId: categoryId || null,
+          images: images || [],
+          isActive,
+          isFeatured,
+          hasVariants: false,
+          isSaleActive,
+          saleStartDate: saleStartDate ? new Date(saleStartDate) : null,
+          saleEndDate: saleEndDate ? new Date(saleEndDate) : null,
+          // ✅ Create bundle items
+          bundleItems: {
+            create: (bundleItems || []).map((item) => ({
+              name: item.name,
+              sku: item.sku,
+              stock: item.stock,
+              attributes: item.attributes,
+            })),
+          },
+        },
+        include: {
+          category: true,
+          bundleItems: true,
+        },
+      });
+
+      console.log("✅ BUNDLE PRODUCT CREATED!");
+      return NextResponse.json(product);
+    }
+    // Handle Variant Products
+    else if (hasVariants && variants && variants.length > 0) {
+      console.log("✅ CREATING PRODUCT WITH VARIANTS");
+
+      const product = await prisma.product.create({
+        data: {
+          name,
+          slug,
+          description: description || null,
+          productType: "variant",  // ✅ ADD THIS
           price: 0,
           compareAtPrice: null,
           costPrice: null,
@@ -142,8 +197,19 @@ export async function POST(request: Request) {
           isActive,
           isFeatured,
           hasVariants: true,
+          isSaleActive,
+          saleStartDate: saleStartDate ? new Date(saleStartDate) : null,
+          saleEndDate: saleEndDate ? new Date(saleEndDate) : null,
           variants: {
-            create: variantsToCreate,
+            create: variants.map((variant) => ({
+              name: variant.name,
+              attributes: variant.attributes,
+              price: variant.price,
+              compareAtPrice: variant.compareAtPrice || null,
+              costPrice: variant.costPrice || null,
+              stock: variant.stock,
+              sku: variant.sku?.trim() || null,
+            })),
           },
         },
         include: {
@@ -152,24 +218,11 @@ export async function POST(request: Request) {
         },
       });
 
-      console.log("✅ PRODUCT CREATED SUCCESSFULLY!");
-      console.log("  Product ID:", product.id);
-      console.log("  Product name:", product.name);
-      console.log("  Variants created:", product.variants.length);
-      console.log("  Variant details:");
-      product.variants.forEach((v, i) => {
-        console.log(`    Variant ${i + 1}:`, {
-          id: v.id,
-          name: v.name,
-          price: v.price,
-          stock: v.stock,
-          variants: v.attributes
-        });
-      });
-      console.log("========================================");
-
+      console.log("✅ PRODUCT WITH VARIANTS CREATED!");
       return NextResponse.json(product);
-    } else {
+    }
+    // Handle Simple Products
+    else {
       console.log("Creating simple product (no variants)");
 
       const product = await prisma.product.create({
@@ -177,6 +230,7 @@ export async function POST(request: Request) {
           name,
           slug,
           description: description || null,
+          productType: "simple",  // ✅ ADD THIS
           price: parseFloat(price),
           compareAtPrice: compareAtPrice ? parseFloat(compareAtPrice) : null,
           costPrice: costPrice ? parseFloat(costPrice) : null,
@@ -187,12 +241,16 @@ export async function POST(request: Request) {
           isActive,
           isFeatured,
           hasVariants: false,
+          isSaleActive,
+          saleStartDate: saleStartDate ? new Date(saleStartDate) : null,
+          saleEndDate: saleEndDate ? new Date(saleEndDate) : null,
         },
         include: {
           category: true,
         },
       });
 
+      console.log("✅ SIMPLE PRODUCT CREATED!");
       return NextResponse.json(product);
     }
   } catch (error) {

@@ -28,6 +28,7 @@ import {
 import { toast } from "sonner";
 import React from "react";
 
+// ✅ UPDATED: Added bundle fields
 type Product = {
   id: string;
   name: string;
@@ -38,6 +39,14 @@ type Product = {
   isActive: boolean;
   isFeatured: boolean;
   hasVariants: boolean;
+  productType?: string;              // ✅ ADD THIS
+  bundleItemsPerSet?: number | null; // ✅ ADD THIS
+  bundlePrice?: number | null;       // ✅ ADD THIS
+  bundleItems?: Array<{              // ✅ ADD THIS
+    id: string;
+    name: string;
+    stock: number;
+  }>;
   category: {
     id: string;
     name: string;
@@ -94,8 +103,19 @@ export default function ProductsTable({ products }: { products: Product[] }) {
     }
   };
 
-  // Helper function to get display data
+  // ✅ UPDATED: Handle bundle products too
   const getDisplayData = (product: Product) => {
+    // Bundle products
+    if (product.productType === "bundle") {
+      return {
+        priceDisplay: `GH₵ ${product.bundlePrice?.toFixed(2) || "0.00"}`,
+        stockDisplay: product.bundleItems?.reduce((sum, item) => sum + item.stock, 0) || 0,
+        itemCount: product.bundleItems?.length || 0,
+        type: "bundle",
+      };
+    }
+
+    // Variant products
     if (
       product.hasVariants &&
       product.variants &&
@@ -115,13 +135,15 @@ export default function ProductsTable({ products }: { products: Product[] }) {
             : `GH₵ ${minPrice.toFixed(2)} - GH₵ ${maxPrice.toFixed(2)}`,
         stockDisplay: totalStock,
         variantCount: product.variants.length,
+        type: "variant",
       };
     }
 
+    // Simple products
     return {
       priceDisplay: `GH₵ ${product.price.toFixed(2)}`,
       stockDisplay: product.stock,
-      variantCount: 0,
+      type: "simple",
     };
   };
 
@@ -145,16 +167,18 @@ export default function ProductsTable({ products }: { products: Product[] }) {
             {products.map((product) => {
               const displayData = getDisplayData(product);
               const isExpanded = expandedProducts.has(product.id);
+              const isBundle = product.productType === "bundle";
               const hasVariants =
                 product.hasVariants &&
                 product.variants &&
                 product.variants.length > 0;
+              const hasBundle = isBundle && product.bundleItems && product.bundleItems.length > 0;
 
               return (
                 <React.Fragment key={product.id}>
                   <TableRow>
                     <TableCell>
-                      {hasVariants && (
+                      {(hasVariants || hasBundle) && (
                         <Button
                           variant="ghost"
                           size="sm"
@@ -190,7 +214,13 @@ export default function ProductsTable({ products }: { products: Product[] }) {
                         {hasVariants && (
                           <p className="text-sm text-gray-500">
                             {displayData.variantCount} variant
-                            {displayData.variantCount > 1 ? "s" : ""}
+                            {displayData.variantCount! > 1 ? "s" : ""}
+                          </p>
+                        )}
+                        {/* ✅ NEW: Show bundle info */}
+                        {isBundle && (
+                          <p className="text-sm text-gray-500">
+                            {product.bundleItemsPerSet} from {displayData.itemCount} items
                           </p>
                         )}
                       </div>
@@ -224,6 +254,12 @@ export default function ProductsTable({ products }: { products: Product[] }) {
                         {product.isFeatured && (
                           <Badge variant="outline">Featured</Badge>
                         )}
+                        {/* ✅ NEW: Show product type badge for bundles */}
+                        {isBundle && (
+                          <Badge variant="outline" className="bg-blue-50 text-blue-700">
+                            Bundle
+                          </Badge>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell className="text-right">
@@ -244,7 +280,7 @@ export default function ProductsTable({ products }: { products: Product[] }) {
                     </TableCell>
                   </TableRow>
 
-                  {/* Variant Rows (Expanded) */}
+                  {/* ✅ UPDATED: Show variant rows (expanded) */}
                   {isExpanded &&
                     hasVariants &&
                     product.variants!.map((variant) => (
@@ -287,6 +323,48 @@ export default function ProductsTable({ products }: { products: Product[] }) {
                         <TableCell></TableCell>
                       </TableRow>
                     ))}
+
+                  {/* ✅ NEW: Show bundle item rows (expanded) */}
+                  {isExpanded &&
+                    isBundle &&
+                    product.bundleItems!.map((item) => (
+                      <TableRow
+                        key={item.id}
+                        className="bg-blue-50 hover:bg-blue-100"
+                      >
+                        <TableCell></TableCell>
+                        <TableCell></TableCell>
+                        <TableCell className="pl-8">
+                          <div className="flex items-center gap-2">
+                            <span className="text-gray-400">└</span>
+                            <span className="text-sm text-gray-700">
+                              {item.name}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-sm text-gray-500">Bundle Item</span>
+                        </TableCell>
+                        <TableCell></TableCell>
+                        <TableCell>
+                          {item.stock === 0 ? (
+                            <Badge variant="destructive" className="text-xs">
+                              Out
+                            </Badge>
+                          ) : item.stock < 5 ? (
+                            <span className="text-orange-600 font-medium text-sm">
+                              {item.stock}
+                            </span>
+                          ) : (
+                            <span className="font-medium text-sm">
+                              {item.stock}
+                            </span>
+                          )}
+                        </TableCell>
+                        <TableCell></TableCell>
+                        <TableCell></TableCell>
+                      </TableRow>
+                    ))}
                 </React.Fragment>
               );
             })}
@@ -301,7 +379,7 @@ export default function ProductsTable({ products }: { products: Product[] }) {
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
               This action cannot be undone. This will permanently delete the
-              product and all its variants.
+              product and all its variants or bundle items.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

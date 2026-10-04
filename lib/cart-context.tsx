@@ -19,6 +19,8 @@ export type CartItem = {
   slug: string;
   image: string;
   stock: number;
+  // ✅ NEW: For bundle products
+  bundleItemsSelected?: string[]; // IDs of selected bundle items
 };
 
 type CartContextType = {
@@ -82,7 +84,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
               slug: typeof cartItem.slug === "string" ? cartItem.slug : "",
               image: typeof cartItem.image === "string" ? cartItem.image : "",
               stock: typeof cartItem.stock === "number" ? cartItem.stock : 999,
-            };
+              bundleItemsSelected: Array.isArray(cartItem.bundleItemsSelected)
+                ? (cartItem.bundleItemsSelected as string[])
+                : undefined,
+            } as CartItem; 
           })
           .filter((item): item is CartItem => item !== null && item.id !== "");
       } catch (error) {
@@ -107,11 +112,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const addItem = (newItem: Omit<CartItem, "id">) => {
     setItems((currentItems) => {
       // Create unique ID: use variantId if exists, otherwise productId
+      // For bundles, use productId
       const itemId = newItem.variantId || newItem.productId;
 
       // Check if item already exists in cart
       const existingItemIndex = currentItems.findIndex(
-        (item) => item.id === itemId
+        (item) => item.id === itemId,
       );
 
       if (existingItemIndex > -1) {
@@ -122,7 +128,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
           ...existingItem,
           quantity: Math.min(
             existingItem.quantity + newItem.quantity,
-            newItem.stock
+            newItem.stock,
           ),
         };
         return updatedItems;
@@ -147,8 +153,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
       currentItems.map((item) =>
         item.id === id
           ? { ...item, quantity: Math.min(quantity, item.stock) }
-          : item
-      )
+          : item,
+      ),
     );
   };
 
@@ -159,7 +165,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const itemCount = items.reduce((total, item) => total + item.quantity, 0);
   const total = items.reduce(
     (total, item) => total + item.price * item.quantity,
-    0
+    0,
   );
 
   return (

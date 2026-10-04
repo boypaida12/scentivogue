@@ -22,6 +22,7 @@ export default async function EditProductPage({
       include: {
         category: true,
         variants: true,
+        bundleItems: true,
       },
     }),
     prisma.category.findMany({

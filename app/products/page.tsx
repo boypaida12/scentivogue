@@ -39,7 +39,8 @@ async function ProductsContent({
     },
     include: {
       category: true,
-      variants: true, 
+      variants: true,
+      bundleItems: true,
     },
     orderBy: {
       createdAt: "desc",

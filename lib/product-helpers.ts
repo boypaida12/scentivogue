@@ -1,11 +1,11 @@
 import { Prisma } from "@prisma/client";
 
-// Type for product with variants from Prisma
+// ✅ UPDATED: Now includes bundleItems
 type PrismaProductWithVariants = Prisma.ProductGetPayload<{
-  include: { category: true; variants: true };
+  include: { category: true; variants: true; bundleItems: true };
 }>;
 
-// Type for transformed variant (what our components expect)
+// Type for transformed variant
 export type TransformedVariant = {
   id: string;
   name: string;
@@ -15,6 +15,15 @@ export type TransformedVariant = {
   costPrice: number | null;
   stock: number;
   sku: string | null;
+};
+
+// ✅ NEW: Type for transformed bundle item
+export type TransformedBundleItem = {
+  id: string;
+  name: string;
+  sku: string | null;
+  stock: number;
+  attributes: Record<string, string>;
 };
 
 // Type for transformed product
@@ -33,9 +42,15 @@ export type TransformedProduct = {
   isActive: boolean;
   isFeatured: boolean;
   hasVariants: boolean;
-  isSaleActive: boolean;              
-  saleStartDate: Date | null;         
-  saleEndDate: Date | null;           
+  productType?: string;                  
+  bundleItemsPerSet?: number | null;     
+  bundlePrice?: number | null;           
+  bundleCompareAtPrice?: number | null;  
+  bundleCostPrice?: number | null;       
+  bundleItems?: TransformedBundleItem[]; 
+  isSaleActive: boolean;
+  saleStartDate: Date | null;
+  saleEndDate: Date | null;
   createdAt: Date;
   updatedAt: Date;
   category: {
@@ -50,8 +65,7 @@ export type TransformedProduct = {
 };
 
 /**
- * Transform Prisma product variants to app-friendly format
- * Converts JsonValue attributes to Record<string, string>
+ * Transform Prisma product with variants and bundle items
  */
 export function transformProductWithVariants(
   product: PrismaProductWithVariants
@@ -71,6 +85,18 @@ export function transformProductWithVariants(
     isActive: product.isActive,
     isFeatured: product.isFeatured,
     hasVariants: product.hasVariants,
+    productType: product.productType,     
+    bundleItemsPerSet: product.bundleItemsPerSet,     
+    bundlePrice: product.bundlePrice,                 
+    bundleCompareAtPrice: product.bundleCompareAtPrice, 
+    bundleCostPrice: product.bundleCostPrice,         
+    bundleItems: product.bundleItems?.map((item) => ({  
+      id: item.id,
+      name: item.name,
+      sku: item.sku,
+      stock: item.stock,
+      attributes: (item.attributes as Record<string, string>) || {},
+    })),
     createdAt: product.createdAt,
     updatedAt: product.updatedAt,
     isSaleActive: product.isSaleActive,
@@ -91,7 +117,7 @@ export function transformProductWithVariants(
 }
 
 /**
- * Transform array of products with variants
+ * Transform array of products with variants and bundle items
  */
 export function transformProductsWithVariants(
   products: PrismaProductWithVariants[]

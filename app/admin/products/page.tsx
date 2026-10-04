@@ -20,6 +20,7 @@ export default async function ProductsPage() {
     include: {
       category: true,
       variants: true, 
+      bundleItems: true,
     },
     orderBy: {
       createdAt: "desc",

@@ -16,6 +16,7 @@ export default async function ProductDetailPage({
     include: {
       category: true,
       variants: true,
+      bundleItems: true,
     },
   });
 
