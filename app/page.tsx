@@ -83,7 +83,7 @@ export default async function HomePage() {
                 </p>
               ) : (
                 <p className="font-bold text-lg md:text-xl">
-                  ⏰ Coming Soon: Mega Sale Oct 10-12! Get Ready for Huge Discounts
+                  ⏰ 3rd Year Anniversary Sale. Massive Discounts & Nationwide Free Delivery. October 10-12, 2026 - Mark Your Calendar!
                 </p>
               )}
             </div>
