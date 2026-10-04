@@ -23,10 +23,10 @@ export default function AddToCartButton({ product }: { product: Product }) {
   const handleAddToCart = () => {
     setIsAdding(true);
      addItem({
-      productId: product.id, // ✅ Changed from 'id' to 'productId'
-      variantId: null, // ✅ Add this (null for simple products)
+      productId: product.id, 
+      variantId: null, 
       name: product.name,
-      variantName: null, // ✅ Add this (null for simple products)
+      variantName: null, 
       price: product.price,
       quantity,
       slug: product.slug,

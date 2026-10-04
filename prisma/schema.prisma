@@ -192,6 +192,8 @@ model OrderItem {
   
   variantId        String?
   variant          ProductVariant? @relation(fields: [variantId], references: [id])
+
+  bundleItemsSelected String?
   
   quantity         Int
   price            Float
