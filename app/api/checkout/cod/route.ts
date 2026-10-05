@@ -104,6 +104,7 @@ export async function POST(request: Request) {
                 ? JSON.stringify(item.bundleItemsSelected)
                 : null,
               quantity: parseInt(String(item.quantity)),
+              productName: item.name || "Unknown Product",
               price: parseFloat(String(item.price)),
             };
 

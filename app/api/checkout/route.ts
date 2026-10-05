@@ -5,9 +5,10 @@ import { prisma } from "@/lib/prisma";
 type OrderItem = {
   productId: string;
   variantId?: string | null;
-  bundleItemsSelected?: string[]; // ✅ ADD THIS
+  bundleItemsSelected?: string[];
   quantity: number;
   price: number;
+  name?: string; 
 };
 
 type CheckoutBody = {
@@ -84,6 +85,7 @@ export async function POST(request: Request) {
               ? JSON.stringify(item.bundleItemsSelected)
               : null,
             quantity: item.quantity,
+            productName: item.name || "Unknown Product",
             price: item.price,
           })),
         },

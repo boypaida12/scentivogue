@@ -116,6 +116,7 @@ export async function GET(request: Request) {
               : null,
             quantity: parseInt(String(item.quantity)),
             price: parseFloat(String(item.price)),
+            productName: item.name || "Unknown Product",
           })),
         },
       },

@@ -142,7 +142,7 @@ export default async function OrderDetailPage({
                         item.bundleItemsSelected &&
                         item.bundleItemsSelected.length > 0;
                       const bundleItemIds: string[] = isBundleOrder
-                        ? JSON.parse(item.bundleItemsSelected as string)
+                        ? JSON.parse(item.bundleItemsSelected!)
                         : [];
 
                       // Get product (either directly or through variant)
@@ -178,6 +178,8 @@ export default async function OrderDetailPage({
                         displayName = product.name;
                       } else if (variant) {
                         displayName = variant.name;
+                      } else if (item.productName) {
+                        displayName = item.productName;
                       }
 
                       return (
