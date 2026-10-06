@@ -33,10 +33,10 @@ export default async function HomePage() {
       isActive: true,
       isFeatured: true,
     },
-    include: { 
-      category: true, 
+    include: {
+      category: true,
       variants: true,
-      bundleItems: true, 
+      bundleItems: true,
     },
     orderBy: { createdAt: "desc" },
     take: 8,
@@ -47,10 +47,10 @@ export default async function HomePage() {
       isActive: true,
       createdAt: { gte: thirtyDaysAgo },
     },
-    include: { 
-      category: true, 
+    include: {
+      category: true,
       variants: true,
-      bundleItems: true, 
+      bundleItems: true,
     },
     orderBy: { createdAt: "desc" },
     take: 8,
@@ -58,13 +58,27 @@ export default async function HomePage() {
 
   const allProducts = await prisma.product.findMany({
     where: { isActive: true, createdAt: { lt: thirtyDaysAgo } },
-    include: { 
-      category: true, 
+    include: {
+      category: true,
       variants: true,
-      bundleItems: true, 
+      bundleItems: true,
     },
     orderBy: { createdAt: "desc" },
     take: 10,
+  });
+
+  const bundleProducts = await prisma.product.findMany({
+    where: {
+      isActive: true,
+      productType: "bundle", // Only bundles
+    },
+    include: {
+      category: true,
+      variants: true,
+      bundleItems: true,
+    },
+    orderBy: { createdAt: "desc" },
+    take: 8,
   });
 
   const yourImageUrl =
@@ -83,7 +97,8 @@ export default async function HomePage() {
                 </p>
               ) : (
                 <p className="font-bold text-lg md:text-xl">
-                  ⏰ 3rd Year Anniversary Sale. Massive Discounts & Nationwide Free Delivery. October 10-12, 2026 - Mark Your Calendar!
+                  ⏰ 3rd Year Anniversary Sale. Massive Discounts & Nationwide
+                  Free Delivery. October 10-12, 2026 - Mark Your Calendar!
                 </p>
               )}
             </div>
@@ -103,7 +118,9 @@ export default async function HomePage() {
               Smell Like a Billionaire
             </h1>
             <p className="text-xl text-white mb-8 md:w-2xl mx-auto">
-              Scentivogue is dedicated to giving you the best experience with regards to your smell. We sell Perfume oils, Eau de parfum, Body splashes and Home fragrances. Wholesale and Retail.
+              Scentivogue is dedicated to giving you the best experience with
+              regards to your smell. We sell Perfume oils, Eau de parfum, Body
+              splashes and Home fragrances. Wholesale and Retail.
             </p>
             <Link href="/products">
               <Button
@@ -217,6 +234,55 @@ export default async function HomePage() {
                     <ProductCard product={product} />
                   </div>
                 ))}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* ── Bundle Deals ─────────────────────────── */}
+        {bundleProducts.length > 0 && (
+          <section className="py-16">
+            <div className="container mx-auto px-4">
+              <div className="flex justify-between items-center mb-16">
+                <div>
+                  <h2 className="text-3xl font-bold">Bundle Deals</h2>
+                  <p className="text-gray-500 text-sm mt-1">
+                    Save more with our curated collections
+                  </p>
+                </div>
+                <Button
+                  className="hover:bg-black text-black border border-black rounded-none bg-transparent hover:text-white cursor-pointer"
+                  asChild
+                >
+                  <Link href="/products" className="flex items-center gap-1">
+                    View All
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </Button>
+              </div>
+
+              <div className="relative">
+                <Carousel
+                  opts={{
+                    align: "start",
+                    loop: false,
+                  }}
+                >
+                  <CarouselContent className="py-2">
+                    {bundleProducts.map((product) => (
+                      <CarouselItem
+                        key={product.id}
+                        className="max-[24rem]:basis-2/3 max-md:basis-1/2 basis-1/4 xl:basis-1/6"
+                      >
+                        <ProductCard product={product} />
+                      </CarouselItem>
+                    ))}
+                  </CarouselContent>
+                  <div className="absolute -top-12 right-0 flex gap-2">
+                    <CarouselPrevious className="static translate-y-0 text-black" />
+                    <CarouselNext className="static translate-y-0 text-black" />
+                  </div>
+                </Carousel>
               </div>
             </div>
           </section>

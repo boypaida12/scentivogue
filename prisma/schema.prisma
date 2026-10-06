@@ -108,7 +108,6 @@ model ProductVariant {
   orderItems     OrderItem[]
 }
 
-// ✅ NEW: Bundle Items Model
 model BundleItem {
   id             String      @id @default(cuid())
   productId      String
@@ -123,6 +122,29 @@ model BundleItem {
   updatedAt      DateTime    @updatedAt
   
   @@index([productId])
+}
+
+model BundleTemplate {
+  id          String                @id @default(cuid())
+  name        String                // "Luxury Fragrance Collection"
+  description String?
+  items       BundleTemplateItem[]
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+}
+
+model BundleTemplateItem {
+  id         String         @id @default(cuid())
+  templateId String
+  template   BundleTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  name       String
+  sku        String?
+  stock      Int            @default(0)
+  attributes Json?          @default("{}")
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+  
+  @@index([templateId])
 }
 
 model Customer {
