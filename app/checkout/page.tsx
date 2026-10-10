@@ -81,7 +81,8 @@ export default function CheckoutPage() {
           },
           items: items.map((item) => ({
             productId: item.productId,
-            variantId: item.variantId, 
+            variantId: item.variantId,
+            bundleItemsSelected: item.bundleItemsSelected,
             quantity: item.quantity,
             price: item.price,
             name: item.name, 
@@ -128,6 +129,7 @@ export default function CheckoutPage() {
           items: items.map((item) => ({
             productId: item.productId,
             variantId: item.variantId,
+            bundleItemsSelected: item.bundleItemsSelected,
             quantity: item.quantity,
             price: item.price,
             name: item.name,

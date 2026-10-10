@@ -1,13 +1,6 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
-
-type WebhookItem = {
-    productId: string;
-    quantity: number;
-    price: number;
-    name: string;
-};
+import { createPaidOrder } from "@/lib/create-paid-order";
 
 export async function POST(request: Request) {
     try {
@@ -38,100 +31,18 @@ export async function POST(request: Request) {
             return NextResponse.json({ received: true });
         }
 
-        const { data } = event;
-        const { metadata, reference, amount } = data;
+        // Safe to call more than once - Paystack can resend webhooks,
+        // and the verify route may have already created this order
+        const { order, created } = await createPaidOrder(event.data);
 
-        // Check if order already exists for this reference
-        // (Paystack can send webhooks multiple times)
-        const existingOrder = await prisma.order.findFirst({
-            where: { paymentReference: reference },
-        });
-
-        if (existingOrder) {
-            console.log("Order already exists for reference:", reference);
-            return NextResponse.json({ received: true });
-        }
-
-        // Extract order data from metadata
-        const {
-            customerName,
-            customerPhone,
-            shipping,
-            items,
-            paymentMethod,
-            notes,
-            subtotal,
-            shippingCost,
-            total,
-        } = metadata;
-
-        const email = data.customer.email;
-
-        // Create or get customer
-        let customer = await prisma.customer.findUnique({
-            where: { email },
-        });
-
-        if (!customer) {
-            customer = await prisma.customer.create({
-                data: {
-                    email,
-                    name: customerName,
-                    phone: customerPhone,
-                },
-            });
-        }
-
-        // Generate order number
-        const orderNumber = `ORD-${Date.now()}`;
-
-        // Create the order NOW (after payment confirmed)
-        const order = await prisma.order.create({
-            data: {
-                orderNumber,
-                customerId: customer.id,
-                shippingName: customerName,
-                shippingEmail: email,
-                shippingPhone: customerPhone,
-                shippingAddress: shipping.address,
-                shippingCity: shipping.city,
-                shippingRegion: shipping.region || null,
-                // Parse numbers explicitly
-                subtotal: parseFloat(String(subtotal)),
-                shippingCost: parseFloat(String(shippingCost)),
-                total: parseFloat(String(total)),
-                paymentMethod,
-                paymentStatus: "PAID",
-                paymentReference: reference,
-                paidAt: new Date(),
-                status: "PROCESSING",
-                notes: notes || null,
-                items: {
-                    create: items.map((item: WebhookItem) => ({
-                        productId: item.productId,
-                        quantity: parseInt(String(item.quantity)),
-                        price: parseFloat(String(item.price)),
-                    })),
-                },
-            },
-        });
-
-        // Reduce product stock
-        for (const item of items as WebhookItem[]) {
-            await prisma.product.update({
-                where: { id: item.productId },
-                data: {
-                    stock: {
-                        decrement: parseInt(String(item.quantity)),
-                    },
-                },
-            });
-        }
-
-        console.log("✅ Order created from webhook:", order.orderNumber);
+        console.log(
+            created ? "✅ Order created from webhook:" : "Order already exists:",
+            order.orderNumber
+        );
 
         return NextResponse.json({ received: true });
     } catch (error) {
+        // 500 makes Paystack retry the webhook
         console.error("Webhook error:", error);
         return NextResponse.json(
             { error: "Webhook processing failed" },
